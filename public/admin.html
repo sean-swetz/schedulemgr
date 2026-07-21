@@ -37,6 +37,12 @@
   input[type=text],input[type=email],input[type=number],input[type=password],textarea,select{
     width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;padding:11px;
   }
+  input[type=text],input[type=email],input[type=number],input[type=password],select{height:44px}
+  select{
+    -webkit-appearance:none;appearance:none;padding:0 34px 0 11px;cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239BA294' stroke-width='3' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;
+  }
   textarea{min-height:78px;resize:vertical;font-family:'Barlow'}
   .row{display:flex;gap:12px;flex-wrap:wrap}
   .row > div{flex:1;min-width:180px}
@@ -57,6 +63,17 @@
   .pill.sent{color:#a4d94e;border:1px solid #3f5a1a}
   .pill.failed{color:#fff;background:var(--red)}
   .pill.skipped{color:var(--muted);border:1px solid var(--line)}
+
+  /* Schedule editor table cells */
+  .c-time{width:150px;white-space:nowrap}
+  .c-time input{width:80px;display:inline-block;vertical-align:middle}
+  .c-time .t12{margin-left:8px;font-size:12px;vertical-align:middle}
+  .c-coach select{min-width:130px}
+  .c-name{width:150px}
+  .c-name input{width:100%}
+  .c-act{width:180px}
+  .btngroup{display:flex;gap:8px;justify-content:flex-end}
+  .btngroup .btn{white-space:nowrap;padding:0 14px}
 
   /* toggle switch */
   .sw{position:relative;display:inline-block;width:42px;height:24px}
@@ -79,15 +96,21 @@
 </header>
 
 <nav class="tabs" id="tabs">
-  <button class="tab sel" data-tab="templates">Message templates</button>
-  <button class="tab" data-tab="coaches">Coach notifications</button>
+  <button class="tab sel" data-tab="coaches">Coaches</button>
+  <button class="tab" data-tab="schedule">Schedule</button>
+  <button class="tab" data-tab="compose">Compose</button>
+  <button class="tab" data-tab="templates">Message templates</button>
+  <button class="tab" data-tab="notify">Coach notifications</button>
   <button class="tab" data-tab="sender">Sender &amp; gym</button>
   <button class="tab" data-tab="log">Send log</button>
 </nav>
 
 <main>
-  <section class="panel show" id="panel-templates"></section>
-  <section class="panel" id="panel-coaches"></section>
+  <section class="panel show" id="panel-coaches"></section>
+  <section class="panel" id="panel-schedule"></section>
+  <section class="panel" id="panel-compose"></section>
+  <section class="panel" id="panel-templates"></section>
+  <section class="panel" id="panel-notify"></section>
   <section class="panel" id="panel-sender"></section>
   <section class="panel" id="panel-log"></section>
 </main>

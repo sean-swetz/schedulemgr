@@ -78,6 +78,7 @@ enum NotificationEvent {
   CLASS_OPENED
   CLASS_CLAIMED
   REMINDER_24H
+  BROADCAST // admin compose-and-send announcement
 }
 
 enum NotificationChannel {
@@ -127,4 +128,14 @@ model Settings {
   classMinutes   Int    @default(75)
   ccAdminsOnClaim Boolean @default(true)
   resendApiKey   String? // set via admin panel; never returned to the client in full
+}
+
+// Reusable admin-authored announcement templates (for the compose-and-send tool).
+model BroadcastTemplate {
+  id        String   @id @default(cuid())
+  name      String // admin's label, e.g. "Gym closed - holiday"
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

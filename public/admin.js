@@ -96,9 +96,322 @@ async function loadTemplates() {
   });
 }
 
-// ── Coach notifications panel ────────────────────────────────────────────────
+// ── Coaches management panel ─────────────────────────────────────────────────
 async function loadCoaches() {
   const el = document.getElementById('panel-coaches');
+  el.innerHTML = '<div class="card"><span class="muted">Loading…</span></div>';
+  const { coaches } = await api('/api/admin/coaches');
+
+  el.innerHTML = `
+    <div class="card">
+      <h3>Add a coach</h3>
+      <div class="hint">They’ll be able to sign in with the email you enter here.</div>
+      <div class="row">
+        <div><label>Name</label><input type="text" id="newName" placeholder="e.g. Chris N."></div>
+        <div><label>Email</label><input type="email" id="newEmail" placeholder="coach@example.com"></div>
+        <div style="max-width:140px"><label>Role</label>
+          <select id="newRole"><option value="COACH">Coach</option><option value="ADMIN">Admin</option></select>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" id="addCoach">Add coach</button></div>
+    </div>
+    <div class="card">
+      <h3>Coaches</h3>
+      <div class="hint">Click a field to edit. Changes to name, email, and role save on Enter or when you click away.</div>
+      <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      ${coaches.map(coachRow).join('')}
+      </tbody></table>
+    </div>`;
+
+  document.getElementById('addCoach').addEventListener('click', async () => {
+    const name = val('newName'), email = val('newEmail'), role = document.getElementById('newRole').value;
+    if (!name || !email) { toast('Name and email are required', true); return; }
+    try {
+      await api('/api/admin/coaches', { method: 'POST', body: JSON.stringify({ name, email, role }) });
+      toast('Coach added'); loadCoaches();
+    } catch (err) { toast(err.message, true); }
+  });
+
+  el.querySelectorAll('tr[data-id]').forEach(wireCoachRow);
+}
+
+function coachRow(c) {
+  const isMe = ME && c.id === ME.id;
+  return `<tr data-id="${c.id}" data-me="${isMe}" ${c.active ? '' : 'style="opacity:.55"'}>
+    <td><input type="text" data-field="name" value="${esc(c.name)}" style="min-width:110px"></td>
+    <td><input type="email" data-field="email" value="${esc(c.email)}" style="min-width:170px"></td>
+    <td>
+      <select data-field="role" ${isMe ? 'disabled title="You can’t change your own role"' : ''}>
+        <option value="COACH" ${c.role === 'COACH' ? 'selected' : ''}>Coach</option>
+        <option value="ADMIN" ${c.role === 'ADMIN' ? 'selected' : ''}>Admin</option>
+      </select>
+    </td>
+    <td>${c.active ? '<span class="pill sent">active</span>' : '<span class="pill skipped">inactive</span>'}</td>
+    <td>${
+      isMe
+        ? '<span class="muted" style="font-size:11px">you</span>'
+        : c.active
+          ? '<button class="btn ghost" data-deactivate>Deactivate</button>'
+          : '<button class="btn ghost" data-reactivate>Reactivate</button>'
+    }</td>
+  </tr>`;
+}
+
+function wireCoachRow(tr) {
+  const id = tr.dataset.id;
+  const save = async (field, value) => {
+    try {
+      await api(`/api/admin/coaches/${id}`, { method: 'PATCH', body: JSON.stringify({ [field]: value }) });
+      toast('Saved');
+    } catch (err) { toast(err.message, true); loadCoaches(); }
+  };
+  tr.querySelectorAll('input[data-field]').forEach((inp) => {
+    inp.addEventListener('change', () => save(inp.dataset.field, inp.value.trim()));
+  });
+  const roleSel = tr.querySelector('select[data-field=role]');
+  if (roleSel) roleSel.addEventListener('change', () => save('role', roleSel.value));
+
+  tr.querySelector('[data-deactivate]')?.addEventListener('click', async () => {
+    const name = tr.querySelector('[data-field=name]').value;
+    if (!confirm(`Deactivate ${name}? Their open coverage requests will be reverted and they won’t be able to sign in.`)) return;
+    try {
+      const { revertedOpen, stillCovering } = await api(`/api/admin/coaches/${id}/active`, { method: 'PATCH', body: JSON.stringify({ active: false }) });
+      let msg = `${name} deactivated`;
+      if (revertedOpen) msg += ` — ${revertedOpen} open request${revertedOpen > 1 ? 's' : ''} reverted`;
+      if (stillCovering) msg += `. ⚠ still covering ${stillCovering} class${stillCovering > 1 ? 'es' : ''} — reassign them`;
+      toast(msg); loadCoaches();
+    } catch (err) { toast(err.message, true); }
+  });
+  tr.querySelector('[data-reactivate]')?.addEventListener('click', async () => {
+    try {
+      await api(`/api/admin/coaches/${id}/active`, { method: 'PATCH', body: JSON.stringify({ active: true }) });
+      toast('Reactivated'); loadCoaches();
+    } catch (err) { toast(err.message, true); }
+  });
+}
+
+// ── Schedule / template editor panel ─────────────────────────────────────────
+// "17:00" → "5:00 PM"
+function fmt12(t) {
+  const [h, m] = t.split(':').map(Number);
+  const ap = h < 12 ? 'AM' : 'PM';
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${ap}`;
+}
+
+async function loadSchedule() {
+  const el = document.getElementById('panel-schedule');
+  el.innerHTML = '<div class="card"><span class="muted">Loading…</span></div>';
+  const [{ days }, { coaches }] = await Promise.all([
+    api('/api/admin/template'),
+    api('/api/admin/coaches'),
+  ]);
+  const active = coaches.filter((c) => c.active);
+  const coachOpts = (sel) =>
+    active.map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <h3>Weekly schedule</h3>
+      <div class="hint">The recurring template. Edits apply to <b>future weeks only</b> — the current week and any
+        already-opened or claimed classes are left as-is. Times are 24-hour (e.g. 17:00 = 5:00 PM).</div>
+    </div>
+    ${days.map((day) => `
+      <div class="card" data-day="${day.dayOfWeek}">
+        <h3>${day.name}</h3>
+        <table><tbody>
+          ${day.slots.map((s) => `<tr data-slot="${s.id}">
+            <td class="c-time"><input type="text" data-time value="${esc(s.time)}"><span class="muted t12">${fmt12(s.time)}</span></td>
+            <td class="c-coach"><select data-coach>${coachOpts(s.coach.id)}</select></td>
+            <td class="c-name"><input type="text" data-cname value="${esc(s.className)}"></td>
+            <td class="c-act"><div class="btngroup"><button class="btn ghost" data-saveslot>Save</button><button class="btn ghost" data-delslot>Remove</button></div></td>
+          </tr>`).join('') || '<tr><td class="muted">No classes</td></tr>'}
+          <tr data-add>
+            <td class="c-time"><input type="text" data-newtime placeholder="HH:MM"></td>
+            <td class="c-coach"><select data-newcoach><option value="">Coach…</option>${coachOpts(null)}</select></td>
+            <td class="c-name"><input type="text" data-newcname placeholder="CrossFit" value="CrossFit"></td>
+            <td class="c-act"><div class="btngroup"><button class="btn" data-addslot>Add class</button></div></td>
+          </tr>
+        </tbody></table>
+      </div>`).join('')}`;
+
+  el.querySelectorAll('tr[data-slot]').forEach((tr) => {
+    const id = tr.dataset.slot;
+    tr.querySelector('[data-saveslot]').addEventListener('click', async () => {
+      const time = tr.querySelector('[data-time]').value.trim();
+      const coachId = tr.querySelector('[data-coach]').value;
+      const className = tr.querySelector('[data-cname]').value.trim();
+      try {
+        const { futureWeeksUpdated } = await api(`/api/admin/template/${id}`, {
+          method: 'PATCH', body: JSON.stringify({ time, coachId, className }),
+        });
+        toast(`Saved — ${futureWeeksUpdated} future week${futureWeeksUpdated === 1 ? '' : 's'} updated`);
+        loadSchedule();
+      } catch (err) { toast(err.message, true); }
+    });
+    tr.querySelector('[data-delslot]').addEventListener('click', async () => {
+      if (!confirm('Remove this class from the weekly schedule? Future scheduled instances will be deleted (open/claimed ones are kept).')) return;
+      try {
+        const { futureInstancesRemoved } = await api(`/api/admin/template/${id}`, { method: 'DELETE' });
+        toast(`Removed — ${futureInstancesRemoved} future instance${futureInstancesRemoved === 1 ? '' : 's'} deleted`);
+        loadSchedule();
+      } catch (err) { toast(err.message, true); }
+    });
+  });
+
+  el.querySelectorAll('.card[data-day]').forEach((card) => {
+    const dayOfWeek = Number(card.dataset.day);
+    card.querySelector('[data-addslot]')?.addEventListener('click', async () => {
+      const time = card.querySelector('[data-newtime]').value.trim();
+      const coachId = card.querySelector('[data-newcoach]').value;
+      const className = card.querySelector('[data-newcname]').value.trim() || 'CrossFit';
+      if (!time || !coachId) { toast('Time and coach are required', true); return; }
+      try {
+        await api('/api/admin/template', { method: 'POST', body: JSON.stringify({ dayOfWeek, time, coachId, className }) });
+        toast('Class added'); loadSchedule();
+      } catch (err) { toast(err.message, true); }
+    });
+  });
+}
+
+// ── Compose / broadcast panel ────────────────────────────────────────────────
+async function loadCompose() {
+  const el = document.getElementById('panel-compose');
+  el.innerHTML = '<div class="card"><span class="muted">Loading…</span></div>';
+  const [{ coaches }, { templates }] = await Promise.all([
+    api('/api/admin/coaches'),
+    api('/api/admin/broadcast-templates'),
+  ]);
+  const active = coaches.filter((c) => c.active);
+
+  el.innerHTML = `
+    <div class="card">
+      <h3>Compose an announcement</h3>
+      <div class="hint">Send a one-off email to coaches. Disabled-email coaches are skipped automatically.</div>
+      ${templates.length ? `
+        <label>Start from a saved template</label>
+        <select id="tplPick"><option value="">— none —</option>${templates
+          .map((t) => `<option value="${t.id}" data-subject="${esc(t.subject)}" data-body="${esc(t.body)}">${esc(t.name)}</option>`)
+          .join('')}</select>` : ''}
+      <label>Recipients</label>
+      <select id="audience">
+        <option value="all">All active coaches</option>
+        <option value="admins">Admins only</option>
+        <option value="coaches">Coaches only (non-admin)</option>
+        <option value="specific">Specific coaches…</option>
+      </select>
+      <div id="specificWrap" style="display:none;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:180px;overflow:auto">
+        ${active.map((c) => `<label style="display:flex;align-items:center;gap:8px;margin:4px 0;text-transform:none;letter-spacing:0;color:var(--text);font-weight:500">
+          <input type="checkbox" class="rcpt" value="${c.id}" style="width:auto;height:auto">${esc(c.name)} <span class="muted" style="font-size:12px">${esc(c.email)}</span>
+        </label>`).join('')}
+      </div>
+      <label>Subject</label>
+      <input type="text" id="bSubject" placeholder="e.g. Gym closed July 4">
+      <label>Message</label>
+      <textarea id="bBody" placeholder="Write your announcement…"></textarea>
+      <div class="btnrow">
+        <button class="btn" id="sendBroadcast">Send now</button>
+        <button class="btn ghost" id="saveTpl">Save as template</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Saved templates <button class="btn" id="newTpl" style="float:right">Create new template</button></h3>
+      <div class="hint">Reusable announcements you can load into the composer.</div>
+      ${templates.length ? `<table><tbody>${templates.map((t) => `<tr data-tpl="${t.id}">
+        <td>${esc(t.name)}</td><td class="muted">${esc(t.subject)}</td>
+        <td style="text-align:right"><button class="btn ghost" data-edittpl>Edit</button> <button class="btn ghost" data-deltpl>Delete</button></td>
+      </tr>`).join('')}</tbody></table>` : '<span class="muted">No saved templates yet.</span>'}
+    </div>`;
+
+  const audience = document.getElementById('audience');
+  audience.addEventListener('change', () => {
+    document.getElementById('specificWrap').style.display = audience.value === 'specific' ? 'block' : 'none';
+  });
+  document.getElementById('tplPick')?.addEventListener('change', (e) => {
+    const opt = e.target.selectedOptions[0];
+    if (!opt.value) return;
+    document.getElementById('bSubject').value = opt.dataset.subject || '';
+    document.getElementById('bBody').value = opt.dataset.body || '';
+  });
+
+  document.getElementById('sendBroadcast').addEventListener('click', async () => {
+    const subject = val('bSubject'), body = document.getElementById('bBody').value.trim();
+    if (!subject || !body) { toast('Subject and message are required', true); return; }
+    const payload = { subject, body };
+    if (audience.value === 'specific') {
+      const ids = [...el.querySelectorAll('.rcpt:checked')].map((c) => c.value);
+      if (!ids.length) { toast('Pick at least one coach', true); return; }
+      payload.userIds = ids;
+    } else {
+      payload.audience = audience.value;
+    }
+    if (!confirm(`Send this announcement to ${audience.value === 'specific' ? payload.userIds.length + ' coach(es)' : audience.options[audience.selectedIndex].text.toLowerCase()}?`)) return;
+    try {
+      const { summary } = await api('/api/admin/broadcast', { method: 'POST', body: JSON.stringify(payload) });
+      toast(`Sent to ${summary.sent}${summary.skipped ? ` (${summary.skipped} skipped)` : ''}${summary.failed ? ` — ${summary.failed} failed` : ''}`);
+    } catch (err) { toast(err.message, true); }
+  });
+
+  // Single save handler — creates a new template, or updates the one being edited.
+  const saveBtn = document.getElementById('saveTpl');
+  saveBtn.addEventListener('click', async () => {
+    const subject = val('bSubject'), body = document.getElementById('bBody').value.trim();
+    const editId = saveBtn.dataset.editId;
+    try {
+      if (editId) {
+        await api(`/api/admin/broadcast-templates/${editId}`, {
+          method: 'PATCH', body: JSON.stringify({ name: saveBtn.dataset.editName, subject, body }),
+        });
+        toast('Template updated');
+      } else {
+        const name = prompt('Name this template:');
+        if (!name) return;
+        await api('/api/admin/broadcast-templates', { method: 'POST', body: JSON.stringify({ name, subject, body }) });
+        toast('Template saved');
+      }
+      loadCompose();
+    } catch (err) { toast(err.message, true); }
+  });
+
+  // Create from scratch: clear the composer and bring the person up to it.
+  document.getElementById('newTpl').addEventListener('click', () => {
+    document.getElementById('bSubject').value = '';
+    document.getElementById('bBody').value = '';
+    const tplPick = document.getElementById('tplPick');
+    if (tplPick) tplPick.value = '';
+    document.getElementById('bSubject').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('bSubject').focus();
+    toast('Write your announcement, then “Save as template”');
+  });
+
+  // Edit: load a template into the composer and switch Save into update mode.
+  el.querySelectorAll('[data-edittpl]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const t = templates.find((x) => x.id === btn.closest('[data-tpl]').dataset.tpl);
+      if (!t) return;
+      document.getElementById('bSubject').value = t.subject;
+      document.getElementById('bBody').value = t.body;
+      saveBtn.textContent = `Update “${t.name}”`;
+      saveBtn.dataset.editId = t.id;
+      saveBtn.dataset.editName = t.name;
+      document.getElementById('bSubject').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast(`Editing “${t.name}” — change it and Update`);
+    });
+  });
+
+  el.querySelectorAll('[data-deltpl]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('[data-tpl]').dataset.tpl;
+      if (!confirm('Delete this template?')) return;
+      try { await api(`/api/admin/broadcast-templates/${id}`, { method: 'DELETE' }); toast('Deleted'); loadCompose(); }
+      catch (err) { toast(err.message, true); }
+    });
+  });
+}
+
+// ── Coach notifications panel ────────────────────────────────────────────────
+async function loadNotify() {
+  const el = document.getElementById('panel-notify');
   el.innerHTML = '<div class="card"><span class="muted">Loading…</span></div>';
   const { coaches } = await api('/api/admin/coaches');
   el.innerHTML = `<div class="card">
@@ -218,15 +531,16 @@ async function loadLog() {
   document.getElementById('refreshLog')?.addEventListener('click', loadLog);
 }
 
-const LOADERS = { templates: loadTemplates, coaches: loadCoaches, sender: loadSender, log: loadLog };
+const LOADERS = { coaches: loadCoaches, schedule: loadSchedule, compose: loadCompose, templates: loadTemplates, notify: loadNotify, sender: loadSender, log: loadLog };
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
+let ME = null;
 (async function boot() {
   try {
-    const me = await api('/api/me');
-    if (me.role !== 'ADMIN') { window.location.href = '/'; return; }
+    ME = await api('/api/me');
+    if (ME.role !== 'ADMIN') { window.location.href = '/'; return; }
   } catch (err) {
     if (err.message === 'unauthorized' || err.message === 'forbidden') return;
   }
-  loadTemplates();
+  loadCoaches();
 })();
