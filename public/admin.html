@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Admin — CFP Coverage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Barlow:wght@400;500;600;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --lime:#B2E51E;--bg:#0B0C0A;--panel:#141613;--panel-2:#1B1E19;
+    --line:#272B24;--text:#F4F6EF;--muted:#9BA294;--red:#FF5340;--radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Barlow',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  a{color:var(--lime)}
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--lime);outline-offset:2px;border-radius:6px}
+
+  .top{background:#000;position:sticky;top:0;z-index:20;border-bottom:3px solid var(--lime);padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .cf{font-family:'Montserrat';font-weight:900;font-size:18px;letter-spacing:.14em;color:var(--lime);text-transform:uppercase}
+  .top .sub{font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.14em;color:#fff;text-transform:uppercase}
+  .top .back{margin-left:auto;font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--panel-2);padding:9px 14px;border-radius:8px;color:var(--text);text-decoration:none}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;padding:16px 18px 0;max-width:1000px;margin:0 auto;width:100%}
+  .tab{font-family:'Montserrat';font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:10px 14px;border-radius:8px;background:var(--panel-2);color:var(--muted)}
+  .tab.sel{background:var(--lime);color:#000}
+
+  main{max-width:1000px;margin:0 auto;padding:18px 18px 60px;width:100%}
+  .panel{display:none}
+  .panel.show{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+  .card h3{font-family:'Montserrat';font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+  .card .hint{color:var(--muted);font-size:13px;margin-bottom:14px}
+
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px}
+  input[type=text],input[type=email],input[type=number],input[type=password],textarea,select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;padding:11px;
+  }
+  textarea{min-height:78px;resize:vertical;font-family:'Barlow'}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row > div{flex:1;min-width:180px}
+
+  .btn{background:var(--lime);color:#000;font-family:'Montserrat';font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:11px 16px;border-radius:8px;min-height:44px}
+  .btn.ghost{background:var(--panel-2);color:var(--muted)}
+  .btn:active{transform:scale(.98)}
+  .btnrow{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+
+  .placeholders{font-size:12px;color:var(--muted);margin-top:6px}
+  .placeholders code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:12px;color:var(--lime)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{font-family:'Montserrat';font-weight:800;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .pill{display:inline-block;font-family:'Montserrat';font-weight:800;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
+  .pill.admin{background:var(--lime);color:#000}
+  .pill.sent{color:#a4d94e;border:1px solid #3f5a1a}
+  .pill.failed{color:#fff;background:var(--red)}
+  .pill.skipped{color:var(--muted);border:1px solid var(--line)}
+
+  /* toggle switch */
+  .sw{position:relative;display:inline-block;width:42px;height:24px}
+  .sw input{opacity:0;width:0;height:0}
+  .sw .slider{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:.15s}
+  .sw .slider::before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:var(--muted);border-radius:50%;transition:.15s}
+  .sw input:checked + .slider{background:var(--lime)}
+  .sw input:checked + .slider::before{transform:translateX(18px);background:#000}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--lime);color:#000;padding:12px 18px;border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.6);font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:.2s}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--red);color:#fff}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top">
+  <a href="/"><img src="/logo.png" alt="CrossFit Prosperity" style="height:34px;width:auto;display:block"></a><span class="sub">Admin</span>
+  <a class="back" href="/">‹ Board</a>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab sel" data-tab="templates">Message templates</button>
+  <button class="tab" data-tab="coaches">Coach notifications</button>
+  <button class="tab" data-tab="sender">Sender &amp; gym</button>
+  <button class="tab" data-tab="log">Send log</button>
+</nav>
+
+<main>
+  <section class="panel show" id="panel-templates"></section>
+  <section class="panel" id="panel-coaches"></section>
+  <section class="panel" id="panel-sender"></section>
+  <section class="panel" id="panel-log"></section>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="/admin.js"></script>
+</body>
+</html>

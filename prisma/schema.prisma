@@ -1,0 +1,130 @@
+// CrossFit Prosperity — Coverage Board
+// Schema per project brief (milestone 1).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COACH
+}
+
+enum ClassStatus {
+  SCHEDULED
+  OPEN
+  CLAIMED
+}
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique
+  name             String // display name, e.g. "Chris N."
+  role             Role            @default(COACH)
+  active           Boolean         @default(true)
+  emailEnabled     Boolean         @default(true)
+  pushSubscription Json? // serialized PushSubscription, null if not enrolled
+  loginTokens      LoginToken[]
+  templateSlots    TemplateSlot[]
+  assigned         ClassInstance[] @relation("assigned")
+  covering         ClassInstance[] @relation("covering")
+}
+
+model LoginToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  usedAt    DateTime?
+}
+
+// The recurring weekly template (source of truth for a normal week)
+model TemplateSlot {
+  id        String @id @default(cuid())
+  dayOfWeek Int // 0=Mon … 6=Sun
+  time      String // "05:30", 24h — render as 12h in UI
+  className String @default("CrossFit")
+  coachId   String
+  coach     User   @relation(fields: [coachId], references: [id])
+
+  @@unique([dayOfWeek, time])
+}
+
+// A concrete class on a concrete date (materialized from the template)
+model ClassInstance {
+  id          String      @id @default(cuid())
+  date        DateTime // date only, class day
+  time        String
+  className   String
+  assignedId  String
+  assigned    User        @relation("assigned", fields: [assignedId], references: [id])
+  status      ClassStatus @default(SCHEDULED)
+  coveredById String?
+  coveredBy   User?       @relation("covering", fields: [coveredById], references: [id])
+  note        String? // "vacation!" — free text from the requesting coach
+  remindedAt  DateTime? // set when the 24h reminder fires
+
+  @@unique([date, time])
+}
+
+// The three notification events. Keys are stable; templates are edited by admins.
+enum NotificationEvent {
+  CLASS_OPENED
+  CLASS_CLAIMED
+  REMINDER_24H
+}
+
+enum NotificationChannel {
+  EMAIL
+  PUSH
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  SKIPPED // recipient had the channel disabled, or the event was paused
+}
+
+// Editable subject/body copy per event. One row per event; seeded with defaults.
+model NotificationTemplate {
+  event     NotificationEvent @id
+  subject   String
+  body      String // supports {placeholders}, e.g. {coach}, {class}, {note}
+  enabled   Boolean           @default(true) // gym-wide on/off for this event
+  updatedAt DateTime          @updatedAt
+}
+
+// One row per delivery attempt (per recipient per channel) — the audit log.
+model NotificationLog {
+  id        String              @id @default(cuid())
+  event     NotificationEvent
+  channel   NotificationChannel
+  status    NotificationStatus
+  userId    String?
+  toAddress String? // email address or a push endpoint hint
+  subject   String?
+  detail    String? // error message when FAILED, or reason when SKIPPED
+  createdAt DateTime            @default(now())
+
+  @@index([createdAt])
+  @@index([event])
+}
+
+// Singleton config row (id is always "singleton"). Sender + gym details.
+model Settings {
+  id             String @id @default("singleton")
+  fromName       String @default("CFP Coverage")
+  fromEmail      String @default("onboarding@resend.dev")
+  replyTo        String?
+  gymName        String @default("CrossFit Prosperity")
+  gymAddress     String @default("Norwood, MA")
+  classMinutes   Int    @default(75)
+  ccAdminsOnClaim Boolean @default(true)
+  resendApiKey   String? // set via admin panel; never returned to the client in full
+}

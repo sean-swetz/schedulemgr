@@ -1,0 +1,21 @@
+# Local Postgres for development. Prod uses Railway's managed Postgres.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cfp-coverage-db
+    environment:
+      POSTGRES_USER: cfp
+      POSTGRES_PASSWORD: cfp
+      POSTGRES_DB: cfp_coverage
+    ports:
+      - "5433:5432"
+    volumes:
+      - cfp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cfp -d cfp_coverage"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  cfp_pgdata:

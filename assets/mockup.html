@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CrossFit Prosperity — Coverage Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Barlow:wght@400;500;600;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --lime:#B2E51E;
+    --bg:#0B0C0A;
+    --panel:#141613;
+    --panel-2:#1B1E19;
+    --line:#272B24;
+    --text:#F4F6EF;
+    --muted:#9BA294;
+    --red:#FF5340;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Barlow',system-ui,sans-serif;
+    background:var(--bg);color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  button:focus-visible{outline:3px solid var(--lime);outline-offset:2px;border-radius:6px}
+
+  .banner{
+    background:var(--lime);color:#0B0C0A;text-align:center;
+    font-family:'Montserrat';font-weight:800;font-size:11px;
+    letter-spacing:.22em;text-transform:uppercase;padding:6px 10px;
+  }
+
+  /* ── Header (sticky, wraps on mobile, contains day tabs) ── */
+  .top{
+    background:#000;position:sticky;top:0;z-index:20;
+    border-bottom:3px solid var(--lime);
+    padding:10px 18px 0;
+  }
+  .top-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-bottom:10px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo svg{display:block}
+  .wordmark .cf{
+    font-family:'Montserrat';font-weight:900;font-size:18px;letter-spacing:.14em;
+    color:var(--lime);text-transform:uppercase;line-height:1;
+  }
+  .wordmark .pros{
+    display:flex;align-items:center;gap:6px;margin-top:3px;
+    font-family:'Montserrat';font-weight:700;font-size:8px;letter-spacing:.42em;
+    color:#fff;text-transform:uppercase;
+  }
+  .wordmark .pros::before,.wordmark .pros::after{
+    content:"";height:1px;background:#fff;flex:1;min-width:8px;opacity:.8;
+  }
+  .weeknav{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .weeknav button{
+    width:36px;height:36px;border-radius:8px;font-size:17px;line-height:1;
+    background:var(--panel-2);color:var(--text);
+  }
+  .weeknav button:hover{background:#262a23}
+  .weeknav .label{
+    font-family:'Montserrat';font-weight:800;font-size:13px;letter-spacing:.1em;
+    min-width:118px;text-align:center;text-transform:uppercase;
+  }
+  .me{
+    display:flex;align-items:center;gap:8px;
+    background:var(--panel-2);padding:5px 13px 5px 6px;border-radius:999px;
+    font-weight:600;font-size:14px;
+  }
+  .avatar{
+    width:22px;height:22px;border-radius:50%;background:var(--lime);color:#000;
+    font-size:10px;font-weight:800;display:inline-flex;align-items:center;
+    justify-content:center;flex:none;font-family:'Montserrat';
+  }
+
+  /* Day tabs — mobile only */
+  .daytabs{display:none;gap:5px;padding:0 0 10px}
+  .daytab{
+    flex:1;min-height:48px;border-radius:9px;background:var(--panel-2);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    position:relative;border:1.5px solid transparent;
+  }
+  .daytab .dw{font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+  .daytab .dt{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .daytab.sel{background:var(--lime);border-color:var(--lime)}
+  .daytab.sel .dw,.daytab.sel .dt{color:#000}
+  .daytab .dot{
+    position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;
+    background:var(--lime);box-shadow:0 0 0 2px #000;
+  }
+  .daytab.sel .dot{background:#000;box-shadow:0 0 0 2px var(--lime)}
+
+  /* ── Needs-coverage strip ── */
+  .alerts{padding:22px 18px 4px;max-width:1360px;margin:0 auto;width:100%}
+  .alerts h2{
+    display:inline-block;font-family:'Montserrat';font-weight:900;font-size:16px;
+    letter-spacing:.1em;text-transform:uppercase;color:#000;background:var(--lime);
+    padding:5px 14px;transform:skew(-8deg);margin-bottom:13px;
+  }
+  .alerts h2 span{display:inline-block;transform:skew(8deg)}
+  .alerts .count{font-family:'Barlow';font-weight:600;font-size:13px;color:var(--muted);margin-left:10px}
+  .alert-row{display:flex;gap:10px;flex-wrap:wrap}
+  .alert-card{
+    background:var(--panel);border:1.5px solid var(--lime);border-radius:var(--radius);
+    padding:13px 15px;display:flex;align-items:center;gap:14px;
+    min-width:280px;flex:1 1 310px;max-width:440px;
+    box-shadow:0 0 0 1px rgba(178,229,30,.08), 0 6px 22px rgba(0,0,0,.5);
+    cursor:pointer;
+  }
+  .alert-card .when{
+    font-family:'Montserrat';font-weight:800;font-size:15px;letter-spacing:.05em;
+    text-transform:uppercase;line-height:1.2;
+  }
+  .alert-card .who{font-size:13.5px;color:var(--muted);margin-top:1px}
+  .alert-card .note{font-family:'Permanent Marker';font-size:13px;color:var(--lime);margin-top:2px}
+  .cta{
+    margin-left:auto;background:var(--lime);color:#000;
+    font-family:'Montserrat';font-weight:800;font-size:12px;letter-spacing:.08em;
+    text-transform:uppercase;padding:12px 15px;border-radius:8px;white-space:nowrap;
+    transition:transform .08s ease, background .15s;min-height:44px;
+  }
+  .cta:hover{background:#c3f43a}
+  .cta:active{transform:scale(.97)}
+  .cta.ghost{background:var(--panel-2);color:var(--muted)}
+  .all-clear{font-family:'Permanent Marker';color:var(--lime);font-size:18px;transform:rotate(-1deg);display:inline-block}
+
+  /* ── Week board ── */
+  .board-wrap{max-width:1360px;margin:0 auto;padding:18px 18px 56px}
+  .board{
+    display:grid;grid-auto-flow:column;grid-auto-columns:minmax(184px,1fr);
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    overflow-x:auto;scroll-snap-type:x proximity;
+  }
+  .day{border-right:1px solid var(--line);display:flex;flex-direction:column;scroll-snap-align:start;min-width:184px}
+  .day:last-child{border-right:none}
+  .day-head{
+    padding:13px 12px 10px;border-bottom:2px solid var(--lime);
+    font-family:'Montserrat';text-transform:uppercase;
+  }
+  .day-head .dow{font-weight:900;font-size:15px;letter-spacing:.12em}
+  .day-head .date{font-weight:700;font-size:10.5px;color:var(--muted);letter-spacing:.18em;margin-top:2px}
+  .day.today .day-head{background:rgba(178,229,30,.08)}
+  .day.today .dow{color:var(--lime)}
+  .day.today .dow::after{
+    content:"today";font-family:'Permanent Marker';font-size:11px;color:var(--lime);
+    margin-left:7px;vertical-align:2px;display:inline-block;transform:rotate(-2deg);
+    text-transform:none;letter-spacing:0;
+  }
+  .slots{padding:8px;display:flex;flex-direction:column;gap:7px;flex:1}
+
+  .slot{
+    border:1px solid var(--line);border-radius:var(--radius);padding:9px 10px 10px;
+    background:var(--panel-2);
+  }
+  .slot .time{
+    font-family:'Montserrat';font-weight:800;font-size:14.5px;letter-spacing:.04em;
+    font-variant-numeric:tabular-nums;
+  }
+  .slot .cname{font-size:12px;color:var(--muted);margin-top:1px}
+  .coach{
+    display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+    background:#22261f;border:1px solid var(--line);border-radius:999px;
+    padding:3px 10px 3px 4px;font-size:13px;font-weight:500;
+  }
+  .coach .avatar{width:20px;height:20px;font-size:9px;background:#3a4034;color:var(--text)}
+  .slot.mine{border-color:rgba(255,255,255,.45)}
+  .slot.mine .coach .avatar{background:var(--lime);color:#000}
+
+  .slot.open{border:1.5px solid var(--lime);background:#181c10}
+  .slot.claimed{border-color:#3f5a1a;background:#141810}
+  .strike{text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;opacity:.55}
+  .stamp{font-family:'Permanent Marker';font-size:13.5px;display:inline-block;margin-top:7px;transform:rotate(-2deg)}
+  .stamp.open{color:var(--lime)}
+  .stamp.covered{color:#8fc63f}
+
+  .slot .act{
+    margin-top:8px;width:100%;text-align:center;border-radius:8px;padding:9px 8px;
+    font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;transition:transform .08s ease;
+  }
+  .slot .act:active{transform:scale(.97)}
+  .act.request{border:1.5px dashed #4a5044;color:var(--muted)}
+  .act.request:hover{border-color:var(--lime);color:var(--lime)}
+  .act.cover{background:var(--lime);color:#000}
+  .act.cover:hover{background:#c3f43a}
+  .act.cancel{border:1.5px solid var(--line);color:var(--muted)}
+  .covered-by{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;font-weight:600;color:#a4d94e}
+  .covered-by .avatar{background:#a4d94e;color:#000;width:20px;height:20px;font-size:9px}
+
+  /* ── Toast ── */
+  .toast{
+    position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:var(--lime);color:#000;padding:13px 18px;border-radius:10px;
+    box-shadow:0 10px 34px rgba(0,0,0,.6);font-size:14px;font-weight:600;
+    opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+    max-width:92vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast b{font-weight:800}
+
+  /* ── Mobile: one day at a time, picked via tabs ── */
+  @media (max-width:760px){
+    .top{padding:8px 12px 0}
+    .top-row{gap:10px}
+    .wordmark .cf{font-size:15px}
+    .wordmark .pros{font-size:7px;letter-spacing:.34em}
+    .weeknav{order:3;width:100%;justify-content:center;margin-left:0}
+    .weeknav .label{flex:1;max-width:180px}
+    .me{margin-left:auto}
+    .me span.name{display:none}
+    .daytabs{display:flex}
+    .alerts,.board-wrap{padding-left:12px;padding-right:12px}
+    .alert-card{max-width:none;flex:1 1 100%}
+    .board{grid-auto-flow:row;grid-auto-columns:unset}
+    .day{display:none;min-width:0;border-right:none}
+    .day.sel{display:flex}
+    .day-head{display:flex;align-items:baseline;gap:10px}
+    .slots{padding:10px;gap:9px}
+    .slot{padding:12px 12px 12px}
+    .slot .time{font-size:16px}
+    .slot .act{min-height:44px;font-size:12px}
+    .coach{min-height:32px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<div class="banner">Coaches only · Coverage board</div>
+
+<header class="top">
+  <div class="top-row">
+    <div class="logo" aria-label="CrossFit Prosperity">
+      <svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <path d="M15 21a9 9 0 0 1 18 0" stroke="#B2E51E" stroke-width="5" stroke-linecap="round"/>
+        <path d="M24 16c8.6 0 14.5 6.2 14.5 13.4 0 3.5-1.5 6.7-4 9.1a3 3 0 0 1-2.1.8H15.6a3 3 0 0 1-2.1-.8c-2.5-2.4-4-5.6-4-9.1C9.5 22.2 15.4 16 24 16Z" fill="#B2E51E"/>
+      </svg>
+      <div class="wordmark">
+        <div class="cf">CrossFit</div>
+        <div class="pros">Prosperity</div>
+      </div>
+    </div>
+    <nav class="weeknav" aria-label="Week navigation">
+      <button aria-label="Previous week">‹</button>
+      <div class="label">Jul 13 – 19</div>
+      <button aria-label="Next week">›</button>
+    </nav>
+    <div class="me"><span class="avatar">SB</span><span class="name">Sean</span></div>
+  </div>
+  <nav class="daytabs" id="daytabs" aria-label="Pick a day"></nav>
+</header>
+
+<section class="alerts" aria-live="polite"><div id="alertsInner"></div></section>
+
+<main class="board-wrap"><div class="board" id="board"></div></main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const ME = 'Sean';
+const initials = n => n.split(/[\s.]+/).filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+/* Real weekly template — from the 2026 paper calendar */
+let id = 0;
+const T = (d,t,c,extra={}) => ({id:++id, d, t, n:'CrossFit', c, s:'sched', ...extra});
+let classes = [
+  T(0,'5:30 AM','Hayley'), T(0,'6:45 AM','Hayley'), T(0,'8:00 AM','Hayley'),
+  T(0,'9:15 AM','Craig'),  T(0,'12:00 PM','Craig'),
+  T(0,'5:00 PM','Chris N.'), T(0,'6:15 PM','Chris N.'),
+
+  T(1,'5:30 AM','Chris D.'), T(1,'6:45 AM','Chris D.'), T(1,'8:00 AM','Chris D.'),
+  T(1,'12:00 PM','Chris D.'),
+  T(1,'5:00 PM','Carey'), T(1,'6:15 PM','Carey'),
+
+  T(2,'5:30 AM','Sean'), T(2,'6:45 AM','Sean'), T(2,'8:00 AM','Sean'),
+  T(2,'9:15 AM','Craig'), T(2,'12:00 PM','Craig'),
+  T(2,'5:00 PM','Stew'), T(2,'6:15 PM','Stew'),
+
+  T(3,'5:30 AM','Tracy',{s:'open',note:'vacation!'}),
+  T(3,'6:45 AM','Tracy',{s:'open',note:'vacation!'}),
+  T(3,'8:00 AM','Tracy',{s:'open',note:'vacation!'}),
+  T(3,'12:00 PM','Verena'), T(3,'5:00 PM','Sam'),
+
+  T(4,'5:30 AM','Jenn'), T(4,'6:45 AM','Jenn'), T(4,'8:00 AM','Craig'),
+  T(4,'9:15 AM','Verena'), T(4,'12:00 PM','Verena'),
+  T(4,'5:00 PM','Jenn',{s:'claimed',by:'Carey'}),
+
+  T(5,'9:00 AM','Craig'),
+  T(6,'9:00 AM','Chris'), T(6,'10:00 AM','Chris'),
+];
+
+const days = [
+  {dow:'Mon',date:'Jul 13',dnum:13},{dow:'Tue',date:'Jul 14',dnum:14,today:true},
+  {dow:'Wed',date:'Jul 15',dnum:15},{dow:'Thu',date:'Jul 16',dnum:16},
+  {dow:'Fri',date:'Jul 17',dnum:17},{dow:'Sat',date:'Jul 18',dnum:18},{dow:'Sun',date:'Jul 19',dnum:19},
+];
+
+let selectedDay = days.findIndex(d=>d.today);
+
+function coachChip(name, extra=''){
+  return `<span class="coach ${extra}"><span class="avatar">${initials(name)}</span>${name}</span>`;
+}
+
+function slotHTML(c){
+  const mine = c.c===ME;
+  let cls='slot'+(mine?' mine':'')+(c.s==='open'?' open':'')+(c.s==='claimed'?' claimed':'');
+  let inner = `<div class="time">${c.t}</div><div class="cname">${c.n}</div>`;
+  if(c.s==='sched'){
+    inner += coachChip(c.c);
+    if(mine) inner += `<button class="act request" data-act="request" data-id="${c.id}">Request coverage</button>`;
+  }
+  if(c.s==='open'){
+    inner += coachChip(c.c,'strike');
+    inner += `<div class="stamp open">needs coverage${c.note?' — '+c.note:''}</div>`;
+    inner += mine
+      ? `<button class="act cancel" data-act="cancel" data-id="${c.id}">Cancel request</button>`
+      : `<button class="act cover" data-act="cover" data-id="${c.id}">I’ll cover it</button>`;
+  }
+  if(c.s==='claimed'){
+    inner += coachChip(c.c,'strike');
+    inner += `<div class="stamp covered">covered ✓</div>`;
+    inner += `<div class="covered-by"><span class="avatar">${initials(c.by)}</span>${c.by} is covering</div>`;
+  }
+  return `<div class="${cls}">${inner}</div>`;
+}
+
+function render(){
+  // day tabs (mobile) — lime dot marks days with open classes
+  document.getElementById('daytabs').innerHTML = days.map((d,i)=>{
+    const hasOpen = classes.some(c=>c.d===i && c.s==='open');
+    return `<button class="daytab${i===selectedDay?' sel':''}" data-day="${i}"
+      aria-pressed="${i===selectedDay}" aria-label="${d.dow} ${d.date}${hasOpen?' — needs coverage':''}">
+      ${hasOpen?'<span class="dot"></span>':''}
+      <span class="dw">${d.dow.slice(0,1)}</span><span class="dt">${d.dnum}</span>
+    </button>`;
+  }).join('');
+
+  // needs-coverage strip
+  const open = classes.filter(c=>c.s==='open');
+  const wrap = document.getElementById('alertsInner');
+  if(open.length){
+    wrap.innerHTML = `<h2><span>Needs coverage</span></h2><span class="count">${open.length} class${open.length>1?'es':''} this week</span>
+      <div class="alert-row">` + open.map(c=>{
+        const d=days[c.d];
+        return `<div class="alert-card" data-goto="${c.d}">
+          <div>
+            <div class="when">${d.dow} ${c.t}</div>
+            <div class="who">${c.n} · usually ${c.c}</div>
+            ${c.note?`<div class="note">“${c.note}”</div>`:''}
+          </div>
+          ${c.c!==ME?`<button class="cta" data-act="cover" data-id="${c.id}">I’ll cover it</button>`
+                    :`<button class="cta ghost" data-act="cancel" data-id="${c.id}">Cancel</button>`}
+        </div>`;
+      }).join('') + `</div>`;
+  } else {
+    wrap.innerHTML = `<span class="all-clear">All classes covered — nice work, team ✓</span>`;
+  }
+
+  // board (all days on desktop; selected day on mobile via CSS)
+  document.getElementById('board').innerHTML = days.map((d,i)=>`
+    <div class="day${d.today?' today':''}${i===selectedDay?' sel':''}">
+      <div class="day-head"><div class="dow">${d.dow}</div><div class="date">${d.date}</div></div>
+      <div class="slots">${classes.filter(c=>c.d===i).map(slotHTML).join('')}</div>
+    </div>`).join('');
+}
+
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.innerHTML=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'), 4200);
+}
+
+document.body.addEventListener('click', e=>{
+  const tab=e.target.closest('.daytab');
+  if(tab){ selectedDay=+tab.dataset.day; render(); return; }
+
+  const btn=e.target.closest('[data-act]');
+  if(btn){
+    const c=classes.find(x=>x.id==btn.dataset.id); if(!c) return;
+    const d=days[c.d];
+    if(btn.dataset.act==='request'){
+      c.s='open'; c.note='';
+      toast(`Coverage requested for <b>${d.dow} ${c.t}</b> — all coaches notified`);
+    }
+    if(btn.dataset.act==='cover'){
+      c.s='claimed'; c.by=ME;
+      toast(`You’re covering <b>${d.dow} ${c.t}</b> — calendar invite sent, reminder set for 24h before`);
+    }
+    if(btn.dataset.act==='cancel'){
+      c.s='sched'; c.note='';
+      toast(`Coverage request canceled for <b>${d.dow} ${c.t}</b>`);
+    }
+    render(); return;
+  }
+
+  // tapping an alert card jumps to that day (handy on mobile)
+  const card=e.target.closest('.alert-card');
+  if(card){
+    selectedDay=+card.dataset.goto; render();
+    document.getElementById('board').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+});
+
+render();
+</script>
+</body>
+</html>

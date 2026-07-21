@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CrossFit Prosperity — Coverage Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Barlow:wght@400;500;600;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --lime:#B2E51E;
+    --bg:#0B0C0A;
+    --panel:#141613;
+    --panel-2:#1B1E19;
+    --line:#272B24;
+    --text:#F4F6EF;
+    --muted:#9BA294;
+    --red:#FF5340;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Barlow',system-ui,sans-serif;
+    background:var(--bg);color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  button:focus-visible{outline:3px solid var(--lime);outline-offset:2px;border-radius:6px}
+
+  .banner{
+    background:var(--lime);color:#0B0C0A;text-align:center;
+    font-family:'Montserrat';font-weight:800;font-size:11px;
+    letter-spacing:.22em;text-transform:uppercase;padding:6px 10px;
+  }
+
+  /* ── Header (sticky, wraps on mobile, contains day tabs) ── */
+  .top{
+    background:#000;position:sticky;top:0;z-index:20;
+    border-bottom:3px solid var(--lime);
+    padding:10px 18px 0;
+  }
+  .top-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-bottom:10px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo svg{display:block}
+  .wordmark .cf{
+    font-family:'Montserrat';font-weight:900;font-size:18px;letter-spacing:.14em;
+    color:var(--lime);text-transform:uppercase;line-height:1;
+  }
+  .wordmark .pros{
+    display:flex;align-items:center;gap:6px;margin-top:3px;
+    font-family:'Montserrat';font-weight:700;font-size:8px;letter-spacing:.42em;
+    color:#fff;text-transform:uppercase;
+  }
+  .wordmark .pros::before,.wordmark .pros::after{
+    content:"";height:1px;background:#fff;flex:1;min-width:8px;opacity:.8;
+  }
+  .weeknav{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .weeknav button{
+    width:36px;height:36px;border-radius:8px;font-size:17px;line-height:1;
+    background:var(--panel-2);color:var(--text);
+  }
+  .weeknav > button:hover{background:#262a23}
+  .labelwrap{position:relative}
+  .weeknav .label{
+    font-family:'Montserrat';font-weight:800;font-size:13px;letter-spacing:.1em;
+    min-width:118px;height:36px;text-align:center;text-transform:uppercase;white-space:nowrap;
+    background:var(--panel-2);color:var(--text);border-radius:8px;padding:0 12px;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+  }
+  .weeknav .label:hover{background:#262a23}
+  .weeknav .label::after{content:"▾";font-size:10px;opacity:.7}
+
+  /* ── Calendar popover ── */
+  .cal{
+    position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 12px 40px rgba(0,0,0,.6);padding:12px;z-index:40;width:266px;
+  }
+  .cal[hidden]{display:none}
+  .cal-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+  .cal-head .m{
+    flex:1;text-align:center;font-family:'Montserrat';font-weight:800;font-size:12px;
+    letter-spacing:.08em;text-transform:uppercase;
+  }
+  .cal-head button{
+    width:30px;height:30px;border-radius:7px;background:var(--panel-2);color:var(--text);font-size:15px;
+  }
+  .cal-head button:hover{background:#262a23}
+  .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+  .cal-dow span{text-align:center;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .cal-grid button{
+    height:32px;border-radius:7px;background:transparent;color:var(--text);
+    font-size:13px;font-variant-numeric:tabular-nums;
+  }
+  .cal-grid button:hover{background:var(--panel-2)}
+  .cal-grid button.other{color:var(--muted);opacity:.45}
+  .cal-grid button.inweek{background:#22261f}
+  .cal-grid button.today{outline:1.5px solid var(--lime);outline-offset:-1.5px}
+  .cal-grid button.selweek{background:var(--lime);color:#000;font-weight:800}
+  .cal-foot{margin-top:8px;text-align:center}
+  .cal-foot button{
+    font-family:'Montserrat';font-weight:800;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);padding:6px 10px;border-radius:7px;white-space:nowrap;width:auto;
+  }
+  .cal-foot button:hover{color:var(--lime)}
+  .me{
+    display:flex;align-items:center;gap:8px;
+    background:var(--panel-2);padding:5px 13px 5px 6px;border-radius:999px;
+    font-weight:600;font-size:14px;
+  }
+  .avatar{
+    width:22px;height:22px;border-radius:50%;background:var(--lime);color:#000;
+    font-size:10px;font-weight:800;display:inline-flex;align-items:center;
+    justify-content:center;flex:none;font-family:'Montserrat';
+  }
+
+  /* Day tabs — mobile only */
+  .daytabs{display:none;gap:5px;padding:0 0 10px}
+  .daytab{
+    flex:1;min-height:48px;border-radius:9px;background:var(--panel-2);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    position:relative;border:1.5px solid transparent;
+  }
+  .daytab .dw{font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+  .daytab .dt{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .daytab.sel{background:var(--lime);border-color:var(--lime)}
+  .daytab.sel .dw,.daytab.sel .dt{color:#000}
+  .daytab .dot{
+    position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;
+    background:var(--lime);box-shadow:0 0 0 2px #000;
+  }
+  .daytab.sel .dot{background:#000;box-shadow:0 0 0 2px var(--lime)}
+
+  /* ── Needs-coverage strip ── */
+  .alerts{padding:22px 18px 4px;max-width:1360px;margin:0 auto;width:100%}
+  .alerts h2{
+    display:inline-block;font-family:'Montserrat';font-weight:900;font-size:16px;
+    letter-spacing:.1em;text-transform:uppercase;color:#000;background:var(--lime);
+    padding:5px 14px;transform:skew(-8deg);margin-bottom:13px;
+  }
+  .alerts h2 span{display:inline-block;transform:skew(8deg)}
+  .alerts .count{font-family:'Barlow';font-weight:600;font-size:13px;color:var(--muted);margin-left:10px}
+  .alert-row{display:flex;gap:10px;flex-wrap:wrap}
+  .alert-card{
+    background:var(--panel);border:1.5px solid var(--lime);border-radius:var(--radius);
+    padding:13px 15px;display:flex;align-items:center;gap:14px;
+    min-width:280px;flex:1 1 310px;max-width:440px;
+    box-shadow:0 0 0 1px rgba(178,229,30,.08), 0 6px 22px rgba(0,0,0,.5);
+    cursor:pointer;
+  }
+  .alert-card .when{
+    font-family:'Montserrat';font-weight:800;font-size:15px;letter-spacing:.05em;
+    text-transform:uppercase;line-height:1.2;
+  }
+  .alert-card .who{font-size:13.5px;color:var(--muted);margin-top:1px}
+  .alert-card .note{font-family:'Permanent Marker';font-size:13px;color:var(--lime);margin-top:2px}
+  .cta{
+    margin-left:auto;background:var(--lime);color:#000;
+    font-family:'Montserrat';font-weight:800;font-size:12px;letter-spacing:.08em;
+    text-transform:uppercase;padding:12px 15px;border-radius:8px;white-space:nowrap;
+    transition:transform .08s ease, background .15s;min-height:44px;
+  }
+  .cta:hover{background:#c3f43a}
+  .cta:active{transform:scale(.97)}
+  .cta.ghost{background:var(--panel-2);color:var(--muted)}
+  .all-clear{font-family:'Permanent Marker';color:var(--lime);font-size:18px;transform:rotate(-1deg);display:inline-block}
+
+  /* ── Week board ── */
+  .board-wrap{max-width:1360px;margin:0 auto;padding:18px 18px 56px}
+  .board{
+    display:grid;grid-auto-flow:column;grid-auto-columns:minmax(184px,1fr);
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    overflow-x:auto;scroll-snap-type:x proximity;
+  }
+  .day{border-right:1px solid var(--line);display:flex;flex-direction:column;scroll-snap-align:start;min-width:184px}
+  .day:last-child{border-right:none}
+  .day-head{
+    padding:13px 12px 10px;border-bottom:2px solid var(--lime);
+    font-family:'Montserrat';text-transform:uppercase;
+  }
+  .day-head .dow{font-weight:900;font-size:15px;letter-spacing:.12em}
+  .day-head .date{font-weight:700;font-size:10.5px;color:var(--muted);letter-spacing:.18em;margin-top:2px}
+  .day.today .day-head{background:rgba(178,229,30,.08)}
+  .day.today .dow{color:var(--lime)}
+  .day.today .dow::after{
+    content:"today";font-family:'Permanent Marker';font-size:11px;color:var(--lime);
+    margin-left:7px;vertical-align:2px;display:inline-block;transform:rotate(-2deg);
+    text-transform:none;letter-spacing:0;
+  }
+  .slots{padding:8px;display:flex;flex-direction:column;gap:7px;flex:1}
+
+  .slot{
+    border:1px solid var(--line);border-radius:var(--radius);padding:9px 10px 10px;
+    background:var(--panel-2);
+  }
+  .slot .time{
+    font-family:'Montserrat';font-weight:800;font-size:14.5px;letter-spacing:.04em;
+    font-variant-numeric:tabular-nums;
+  }
+  .slot .cname{font-size:12px;color:var(--muted);margin-top:1px}
+  .coach{
+    display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+    background:#22261f;border:1px solid var(--line);border-radius:999px;
+    padding:3px 10px 3px 4px;font-size:13px;font-weight:500;
+  }
+  .coach .avatar{width:20px;height:20px;font-size:9px;background:#3a4034;color:var(--text)}
+  .slot.mine{border-color:rgba(255,255,255,.45)}
+  .slot.mine .coach .avatar{background:var(--lime);color:#000}
+
+  .slot.open{border:1.5px solid var(--lime);background:#181c10}
+  .slot.claimed{border-color:#3f5a1a;background:#141810}
+  .strike{text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;opacity:.55}
+  .stamp{font-family:'Permanent Marker';font-size:13.5px;display:inline-block;margin-top:7px;transform:rotate(-2deg)}
+  .stamp.open{color:var(--lime)}
+  .stamp.covered{color:#8fc63f}
+
+  .slot .act{
+    margin-top:8px;width:100%;text-align:center;border-radius:8px;padding:9px 8px;
+    font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;transition:transform .08s ease;
+  }
+  .slot .act:active{transform:scale(.97)}
+  .slot .act[disabled]{opacity:.5;cursor:default}
+  .act.request{border:1.5px dashed #4a5044;color:var(--muted)}
+  .act.request:hover{border-color:var(--lime);color:var(--lime)}
+  .act.cover{background:var(--lime);color:#000}
+  .act.cover:hover{background:#c3f43a}
+  .act.cancel{border:1.5px solid var(--line);color:var(--muted)}
+  .covered-by{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;font-weight:600;color:#a4d94e}
+  .covered-by .avatar{background:#a4d94e;color:#000;width:20px;height:20px;font-size:9px}
+
+  /* ── Toast ── */
+  .toast{
+    position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:var(--lime);color:#000;padding:13px 18px;border-radius:10px;
+    box-shadow:0 10px 34px rgba(0,0,0,.6);font-size:14px;font-weight:600;
+    opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+    max-width:92vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--red);color:#fff}
+  .toast b{font-weight:800}
+
+  /* Loading / empty states */
+  .board-msg{padding:60px 18px;text-align:center;color:var(--muted);font-size:15px}
+
+  /* ── Mobile: one day at a time, picked via tabs ── */
+  @media (max-width:760px){
+    .top{padding:8px 12px 0}
+    .top-row{gap:10px}
+    .wordmark .cf{font-size:15px}
+    .wordmark .pros{font-size:7px;letter-spacing:.34em}
+    .weeknav{order:3;width:100%;justify-content:center;margin-left:0}
+    .weeknav .label{flex:1;max-width:180px}
+    .me{margin-left:auto}
+    .me span.name{display:none}
+    .daytabs{display:flex}
+    .alerts,.board-wrap{padding-left:12px;padding-right:12px}
+    .alert-card{max-width:none;flex:1 1 100%}
+    .board{grid-auto-flow:row;grid-auto-columns:unset}
+    .day{display:none;min-width:0;border-right:none}
+    .day.sel{display:flex}
+    .day-head{display:flex;align-items:baseline;gap:10px}
+    .slots{padding:10px;gap:9px}
+    .slot{padding:12px 12px 12px}
+    .slot .time{font-size:16px}
+    .slot .act{min-height:44px;font-size:12px}
+    .coach{min-height:32px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<div class="banner">Coaches only · Coverage board</div>
+
+<header class="top">
+  <div class="top-row">
+    <div class="logo" aria-label="CrossFit Prosperity">
+      <img src="/logo.png" alt="CrossFit Prosperity" style="height:40px;width:auto;display:block">
+    </div>
+    <nav class="weeknav" aria-label="Week navigation">
+      <button id="prevWeek" aria-label="Previous week">‹</button>
+      <div class="labelwrap">
+        <button class="label" id="weekLabel" aria-haspopup="dialog" aria-expanded="false" aria-label="Pick a week">—</button>
+        <div class="cal" id="cal" role="dialog" aria-label="Choose a date" hidden></div>
+      </div>
+      <button id="nextWeek" aria-label="Next week">›</button>
+    </nav>
+    <a href="/admin.html" id="adminLink" aria-label="Admin settings" style="display:none;align-items:center;gap:7px;font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--panel-2);padding:9px 13px;border-radius:8px;color:var(--text);text-decoration:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:block">
+        <path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <span>Admin</span>
+    </a>
+    <div class="me"><span class="avatar" id="meAvatar">··</span><span class="name" id="meName"></span></div>
+  </div>
+  <nav class="daytabs" id="daytabs" aria-label="Pick a day"></nav>
+</header>
+
+<section class="alerts" aria-live="polite"><div id="alertsInner"></div></section>
+
+<main class="board-wrap"><div class="board" id="board"><div class="board-msg">Loading…</div></div></main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
