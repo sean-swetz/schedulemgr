@@ -44,11 +44,12 @@ function fill(str, vars) {
 }
 
 function buildVars(instance, settings) {
-  const note = instance.note ? ` (${instance.note})` : '';
+  // instance may be null for events not tied to a single class (e.g. digest).
+  const note = instance?.note ? ` (${instance.note})` : '';
   return {
-    coach: instance.assigned?.name ?? '',
-    coverer: instance.coveredBy?.name ?? '',
-    class: classLabel(instance),
+    coach: instance?.assigned?.name ?? '',
+    coverer: instance?.coveredBy?.name ?? '',
+    class: instance ? classLabel(instance) : '',
     note,
     gym: settings.gymName,
   };
@@ -74,7 +75,7 @@ export async function notify(userIds, event) {
   // Gym-wide toggle: event paused → log SKIPPED per recipient, send nothing.
   const paused = !template.enabled;
 
-  const vars = buildVars(instance, settings);
+  const vars = { ...buildVars(instance, settings), ...(extra.vars || {}) };
   const subject = fill(template.subject, vars);
   const body = fill(template.body, vars);
   const from = `${settings.fromName} <${settings.fromEmail}>`;

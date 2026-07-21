@@ -79,6 +79,8 @@ enum NotificationEvent {
   CLASS_CLAIMED
   REMINDER_24H
   BROADCAST // admin compose-and-send announcement
+  WEEKLY_DIGEST // scheduled summary of open classes for the coming week
+  UNCOVERED_ESCALATION // class still open close to its start time
 }
 
 enum NotificationChannel {
@@ -128,6 +130,10 @@ model Settings {
   classMinutes   Int    @default(75)
   ccAdminsOnClaim Boolean @default(true)
   resendApiKey   String? // set via admin panel; never returned to the client in full
+  // Automatic-notification scheduling
+  digestDayOfWeek  Int @default(6) // 0=Mon…6=Sun; when the weekly digest sends (default Sun)
+  digestHour       Int @default(18) // local hour 0-23 (default 6pm)
+  escalationHours  Int @default(12) // notify admins if a class is still OPEN this many hours before start
 }
 
 // Reusable admin-authored announcement templates (for the compose-and-send tool).

@@ -52,6 +52,13 @@ const server = app.listen(port, () => {
   console.log(`CFP Coverage Board API listening on http://localhost:${port}`);
 });
 
+// In-process scheduled jobs (reminders, escalation, digest, materialization).
+// Skip under `node --watch` reloads' duplicate spawns and in test runs.
+if (process.env.DISABLE_CRON !== '1') {
+  const { startScheduler } = await import('./lib/scheduler.js');
+  startScheduler();
+}
+
 // Graceful shutdown so `node --watch` restarts and Ctrl-C don't leak connections.
 async function shutdown() {
   await prisma.$disconnect();

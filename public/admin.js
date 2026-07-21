@@ -5,6 +5,8 @@ const EVENT_LABELS = {
   CLASS_OPENED: 'Class opened → all coaches',
   CLASS_CLAIMED: 'Class claimed → requester, admins & coverer',
   REMINDER_24H: '24-hour reminder → covering coach',
+  WEEKLY_DIGEST: 'Weekly digest → all coaches (open classes next week)',
+  UNCOVERED_ESCALATION: 'Uncovered escalation → admins (class still open, starting soon)',
 };
 
 async function api(path, opts) {
@@ -45,7 +47,7 @@ async function loadTemplates() {
   const { templates } = await api('/api/admin/templates');
   el.innerHTML =
     `<div class="card"><h3>Placeholders</h3><div class="hint">Drop these into any subject or body — they’re filled in when the message is sent.</div>
-      <div class="placeholders"><code>{coach}</code> <code>{coverer}</code> <code>{class}</code> <code>{note}</code> <code>{gym}</code></div></div>` +
+      <div class="placeholders"><code>{coach}</code> <code>{coverer}</code> <code>{class}</code> <code>{note}</code> <code>{gym}</code> &nbsp; <span class="muted">(weekly digest also supports</span> <code>{list}</code><span class="muted">)</span></div></div>` +
     templates
       .map(
         (t) => `

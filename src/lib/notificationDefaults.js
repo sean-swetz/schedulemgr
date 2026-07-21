@@ -24,4 +24,14 @@ export const DEFAULT_TEMPLATES = {
     body: 'Heads up — you’re covering {class} at {gym} in about 24 hours. Thanks for stepping in!',
     enabled: true,
   },
+  WEEKLY_DIGEST: {
+    subject: 'Open classes this week at {gym}',
+    body: 'Here are the classes still needing coverage this week:\n{list}\n\nOpen the board to claim one.',
+    enabled: true,
+  },
+  UNCOVERED_ESCALATION: {
+    subject: 'Still uncovered: {class}',
+    body: '{class} is starting soon and still needs a coach (originally {coach}). Can anyone cover?',
+    enabled: true,
+  },
 };
