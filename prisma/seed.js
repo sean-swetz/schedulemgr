@@ -94,22 +94,32 @@ async function main() {
     console.log(`Coaches already seeded (${existingCount} present) — left existing rows untouched.`);
   }
 
-  // Upsert template slots (idempotent by @@unique([dayOfWeek, time])).
+  // Template slots are also a one-time bootstrap. Admins edit the weekly
+  // schedule via the Schedule tab (reassigning coaches, changing times, adding/
+  // removing classes) — re-running this upsert with `update: { coachId, ... }`
+  // on every deploy would silently overwrite those edits back to the original
+  // hardcoded template, which is exactly what happened: any admin schedule
+  // change got reverted on the next deploy. Only ever create slots that don't
+  // exist yet (by day+time); never touch ones that are already there.
+  const existingSlotCount = await prisma.templateSlot.count();
   let slotCount = 0;
   for (const [dow, entries] of Object.entries(TEMPLATE)) {
     const dayOfWeek = Number(dow);
     for (const [time, coachKey] of entries) {
       const coachId = idByKey[coachKey];
       if (!coachId) throw new Error(`Unknown coach in template: ${coachKey}`);
-      await prisma.templateSlot.upsert({
-        where: { dayOfWeek_time: { dayOfWeek, time } },
-        update: { coachId, className: 'CrossFit' },
-        create: { dayOfWeek, time, coachId, className: 'CrossFit' },
-      });
-      slotCount++;
+      const existing = await prisma.templateSlot.findUnique({ where: { dayOfWeek_time: { dayOfWeek, time } } });
+      if (!existing) {
+        await prisma.templateSlot.create({ data: { dayOfWeek, time, coachId, className: 'CrossFit' } });
+        slotCount++;
+      }
     }
   }
-  console.log(`Seeded ${slotCount} template slots.`);
+  if (existingSlotCount === 0) {
+    console.log(`Seeded ${slotCount} template slots.`);
+  } else {
+    console.log(`Template already seeded (${existingSlotCount} slots present) — added ${slotCount} missing, left the rest untouched.`);
+  }
 
   // Notification templates — create if missing, don't clobber admin edits.
   let tplCount = 0;
