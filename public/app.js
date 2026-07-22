@@ -104,7 +104,7 @@ function slotHTML(c) {
     const by = c.coveredBy ? c.coveredBy.name : '—';
     inner += `<div class="covered-by"><span class="avatar">${initials(by)}</span>${by} is covering</div>`;
     if (iAmCovering) {
-      inner += `<button class="act cancel" data-act="unclaim" data-id="${c.id}">Can’t make it anymore</button>`;
+      inner += `<button class="act cancel" data-act="unclaim" data-id="${c.id}">Cancel coverage</button>`;
     }
   }
   return `<div class="${cls}">${inner}</div>`;
