@@ -247,6 +247,38 @@ adminRouter.patch('/api/admin/coaches/:id/active', async (req, res) => {
   res.json({ coach: serializeCoach(updated), revertedOpen, stillCovering });
 });
 
+// DELETE /api/admin/coaches/:id → hard-delete a coach.
+// Only allowed when the coach has no history to protect (no template slots, no
+// class instances assigned/covered, no login tokens) — otherwise deleting would
+// either orphan real schedule data or silently erase it. This is meant for
+// cleaning up accidental/duplicate coaches, not removing coaches who've coached.
+adminRouter.delete('/api/admin/coaches/:id', async (req, res) => {
+  const { id } = req.params;
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) return res.status(404).json({ error: 'Coach not found' });
+  if (id === req.user.id) return res.status(400).json({ error: "You can't delete yourself" });
+
+  const [slots, assigned, covering, tokens] = await Promise.all([
+    prisma.templateSlot.count({ where: { coachId: id } }),
+    prisma.classInstance.count({ where: { assignedId: id } }),
+    prisma.classInstance.count({ where: { coveredById: id } }),
+    prisma.loginToken.count({ where: { userId: id } }),
+  ]);
+  const blockers = [];
+  if (slots) blockers.push(`${slots} weekly template slot${slots > 1 ? 's' : ''}`);
+  if (assigned) blockers.push(`${assigned} assigned class${assigned > 1 ? 'es' : ''}`);
+  if (covering) blockers.push(`${covering} class${covering > 1 ? 'es' : ''} they're covering`);
+  if (tokens) blockers.push('sign-in history');
+  if (blockers.length) {
+    return res.status(409).json({
+      error: `Can't delete — this coach has ${blockers.join(', ')}. Deactivate them instead, or reassign those first.`,
+    });
+  }
+
+  await prisma.user.delete({ where: { id } });
+  res.json({ ok: true });
+});
+
 // ── Broadcast (compose-and-send announcements) ───────────────────────────────
 // POST /api/admin/broadcast { subject, body, audience?|userIds? } → send now.
 adminRouter.post('/api/admin/broadcast', async (req, res) => {

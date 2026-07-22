@@ -17,7 +17,7 @@
   button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
   button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--lime);outline-offset:2px;border-radius:6px}
 
-  .top{background:#000;position:sticky;top:0;z-index:20;border-bottom:3px solid var(--lime);padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .top{background:#000;position:sticky;top:0;z-index:20;border-bottom:3px solid var(--lime);padding:calc(12px + env(safe-area-inset-top)) 18px 12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .cf{font-family:'Montserrat';font-weight:900;font-size:18px;letter-spacing:.14em;color:var(--lime);text-transform:uppercase}
   .top .sub{font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.14em;color:#fff;text-transform:uppercase}
   .top .back{margin-left:auto;font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--panel-2);padding:9px 14px;border-radius:8px;color:var(--text);text-decoration:none}

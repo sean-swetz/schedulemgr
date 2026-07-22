@@ -150,12 +150,13 @@ function coachRow(c) {
       </select>
     </td>
     <td>${c.active ? '<span class="pill sent">active</span>' : '<span class="pill skipped">inactive</span>'}</td>
-    <td>${
+    <td style="white-space:nowrap">${
       isMe
         ? '<span class="muted" style="font-size:11px">you</span>'
-        : c.active
-          ? '<button class="btn ghost" data-deactivate>Deactivate</button>'
-          : '<button class="btn ghost" data-reactivate>Reactivate</button>'
+        : (c.active
+            ? '<button class="btn ghost" data-deactivate>Deactivate</button>'
+            : '<button class="btn ghost" data-reactivate>Reactivate</button>') +
+          ' <button class="btn ghost" data-delete title="Only works if this coach has no schedule history">Delete</button>'
     }</td>
   </tr>`;
 }
@@ -189,6 +190,14 @@ function wireCoachRow(tr) {
     try {
       await api(`/api/admin/coaches/${id}/active`, { method: 'PATCH', body: JSON.stringify({ active: true }) });
       toast('Reactivated'); loadCoaches();
+    } catch (err) { toast(err.message, true); }
+  });
+  tr.querySelector('[data-delete]')?.addEventListener('click', async () => {
+    const name = tr.querySelector('[data-field=name]').value;
+    if (!confirm(`Permanently delete ${name}? This only works if they have no schedule history — otherwise it'll tell you why not.`)) return;
+    try {
+      await api(`/api/admin/coaches/${id}`, { method: 'DELETE' });
+      toast(`${name} deleted`); loadCoaches();
     } catch (err) { toast(err.message, true); }
   });
 }
