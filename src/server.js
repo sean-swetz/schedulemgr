@@ -15,6 +15,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 
 const app = express();
+// Behind Railway's HTTPS proxy: trust it so secure cookies are set correctly.
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 app.use(express.json());
 app.use(cookieParser());
 app.use(loadUser); // populates req.user (or null) from the session cookie

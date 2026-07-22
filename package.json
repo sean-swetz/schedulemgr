@@ -7,11 +7,15 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "release": "prisma migrate deploy && node prisma/seed.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.js",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
