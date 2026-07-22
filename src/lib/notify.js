@@ -1,7 +1,13 @@
 import { prisma } from './prisma.js';
 import { sendEmail } from './mailer.js';
+import { sendPushToUser } from './push.js';
 import { DEFAULT_TEMPLATES } from './notificationDefaults.js';
 import { classLabel } from './format.js';
+
+// Where a notification should deep-link in the app (best-effort).
+function deepLink(instance) {
+  return '/';
+}
 
 // Channel-agnostic notification entry point. Fans out an event to a set of users
 // over email (push added in the PWA milestone), rendering the admin-editable
@@ -83,36 +89,45 @@ export async function notify(userIds, event) {
   const ids = [...new Set(userIds)].filter(Boolean);
   const users = await prisma.user.findMany({ where: { id: { in: ids } } });
 
+  const url = deepLink(instance);
+
   for (const user of users) {
     if (!user.active) continue;
 
+    // ── Email channel (respects per-user emailEnabled) ──
     if (paused) {
       await log({ event: type, channel: 'EMAIL', status: 'SKIPPED', userId: user.id,
         toAddress: user.email, subject, detail: 'event disabled' });
-      continue;
-    }
-    if (!user.emailEnabled) {
+    } else if (!user.emailEnabled) {
       await log({ event: type, channel: 'EMAIL', status: 'SKIPPED', userId: user.id,
         toAddress: user.email, subject, detail: 'email disabled for user' });
-      continue;
+    } else {
+      try {
+        await sendEmail({
+          to: user.email, subject, text: body, from,
+          replyTo: settings.replyTo || undefined,
+          attachments: extra.attachments,
+          apiKey: settings.resendApiKey || undefined,
+        });
+        await log({ event: type, channel: 'EMAIL', status: 'SENT', userId: user.id,
+          toAddress: user.email, subject });
+      } catch (err) {
+        await log({ event: type, channel: 'EMAIL', status: 'FAILED', userId: user.id,
+          toAddress: user.email, subject, detail: String(err.message || err) });
+        console.error(`notify: email to ${user.email} failed:`, err);
+      }
     }
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject,
-        text: body,
-        from,
-        replyTo: settings.replyTo || undefined,
-        attachments: extra.attachments,
-        apiKey: settings.resendApiKey || undefined,
-      });
-      await log({ event: type, channel: 'EMAIL', status: 'SENT', userId: user.id,
-        toAddress: user.email, subject });
-    } catch (err) {
-      await log({ event: type, channel: 'EMAIL', status: 'FAILED', userId: user.id,
-        toAddress: user.email, subject, detail: String(err.message || err) });
-      console.error(`notify: email to ${user.email} failed:`, err);
+    // ── Push channel (fires when the user has a subscription; same pause) ──
+    if (!paused && user.pushSubscription) {
+      const outcome = await sendPushToUser(user, { title: subject, body, url });
+      if (outcome === 'sent') {
+        await log({ event: type, channel: 'PUSH', status: 'SENT', userId: user.id, subject });
+      } else if (outcome === 'gone') {
+        await log({ event: type, channel: 'PUSH', status: 'FAILED', userId: user.id, subject, detail: 'subscription expired (pruned)' });
+      } else if (outcome === 'failed') {
+        await log({ event: type, channel: 'PUSH', status: 'FAILED', userId: user.id, subject, detail: 'push send failed' });
+      }
     }
   }
 }

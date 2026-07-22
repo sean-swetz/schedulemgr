@@ -366,3 +366,8 @@ calEl.addEventListener('click', async (e) => {
     document.getElementById('board').innerHTML = `<div class="board-msg">Couldn’t load the schedule. ${err.message}</div>`;
   }
 })();
+
+// Register the service worker (enables install + push).
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('SW registration failed:', err));
+}

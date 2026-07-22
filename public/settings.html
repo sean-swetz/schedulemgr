@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Settings — CFP Coverage</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0B0C0A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--lime:#B2E51E;--bg:#0B0C0A;--panel:#141613;--panel-2:#1B1E19;--line:#272B24;--text:#F4F6EF;--muted:#9BA294;--red:#FF5340}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Barlow',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  .top{background:#000;position:sticky;top:0;border-bottom:3px solid var(--lime);padding:12px 18px;display:flex;align-items:center;gap:14px}
+  .top img{height:32px}
+  .top .sub{font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.14em;color:#fff;text-transform:uppercase}
+  .top .back{margin-left:auto;font-family:'Montserrat';font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--panel-2);padding:9px 14px;border-radius:8px;color:var(--text);text-decoration:none}
+  main{max-width:520px;margin:0 auto;padding:20px 18px 60px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+  .card h3{font-family:'Montserrat';font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+  .card p{color:var(--muted);font-size:14px;margin-bottom:14px}
+  .btn{background:var(--lime);color:#000;border:none;cursor:pointer;font-family:'Montserrat';font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:12px 18px;border-radius:8px;min-height:46px}
+  .btn.ghost{background:var(--panel-2);color:var(--muted)}
+  .btn:active{transform:scale(.98)}
+  .row{display:flex;align-items:center;gap:12px}
+  .state{font-size:13px;color:var(--muted);margin-top:12px;min-height:18px}
+  .state.on{color:var(--lime)}
+  .state.err{color:var(--red)}
+  code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:13px}
+</style>
+</head>
+<body>
+<header class="top">
+  <a href="/"><img src="/logo.png" alt="CrossFit Prosperity"></a><span class="sub">Settings</span>
+  <a class="back" href="/">‹ Board</a>
+</header>
+<main>
+  <div class="card">
+    <h3>Push notifications</h3>
+    <p>Get a notification on this device when a class needs coverage, when yours gets claimed, and 24h before a class you're covering.</p>
+    <div class="row">
+      <button class="btn" id="pushBtn">Enable push</button>
+      <button class="btn ghost" id="pushOff" style="display:none">Turn off</button>
+    </div>
+    <div class="state" id="pushState"></div>
+  </div>
+
+  <div class="card">
+    <h3>Install the app</h3>
+    <p>Add CFP Coverage to your home screen for quick access.</p>
+    <div id="installArea">
+      <button class="btn" id="installBtn" style="display:none">Install app</button>
+      <p id="installHint" style="margin:0">On iPhone: tap the Share button, then <b>Add to Home Screen</b>. On Android/desktop Chrome: use the install icon in the address bar.</p>
+    </div>
+  </div>
+</main>
+<script src="/settings.js"></script>
+</body>
+</html>

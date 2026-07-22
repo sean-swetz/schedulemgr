@@ -7,6 +7,7 @@ import { weekRouter } from './routes/week.js';
 import { authRouter } from './routes/auth.js';
 import { classesRouter } from './routes/classes.js';
 import { adminRouter } from './routes/admin.js';
+import { pushRouter } from './routes/push.js';
 import { loadUser, requireAuth } from './lib/authMiddleware.js';
 import { prisma } from './lib/prisma.js';
 
@@ -45,6 +46,7 @@ app.get('/api/me', requireAuth, (req, res) => {
 app.use('/api', requireAuth);
 app.use(weekRouter);
 app.use(classesRouter);
+app.use(pushRouter);
 app.use(adminRouter); // requireAdmin is applied inside for /api/admin/*
 
 const port = Number(process.env.PORT) || 3000;
