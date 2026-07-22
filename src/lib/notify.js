@@ -2,7 +2,7 @@ import { prisma } from './prisma.js';
 import { sendEmail } from './mailer.js';
 import { sendPushToUser } from './push.js';
 import { DEFAULT_TEMPLATES } from './notificationDefaults.js';
-import { classLabel } from './format.js';
+import { classLabel, dateLabel } from './format.js';
 
 // Where a notification should deep-link in the app (best-effort).
 function deepLink(instance) {
@@ -56,6 +56,7 @@ function buildVars(instance, settings) {
     coach: instance?.assigned?.name ?? '',
     coverer: instance?.coveredBy?.name ?? '',
     class: instance ? classLabel(instance) : '',
+    date: instance ? dateLabel(instance.date) : '',
     note,
     gym: settings.gymName,
   };

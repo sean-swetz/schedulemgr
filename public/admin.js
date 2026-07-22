@@ -47,7 +47,7 @@ async function loadTemplates() {
   const { templates } = await api('/api/admin/templates');
   el.innerHTML =
     `<div class="card"><h3>Placeholders</h3><div class="hint">Drop these into any subject or body — they’re filled in when the message is sent.</div>
-      <div class="placeholders"><code>{coach}</code> <code>{coverer}</code> <code>{class}</code> <code>{note}</code> <code>{gym}</code> &nbsp; <span class="muted">(weekly digest also supports</span> <code>{list}</code><span class="muted">)</span></div></div>` +
+      <div class="placeholders"><code>{coach}</code> <code>{coverer}</code> <code>{class}</code> <code>{date}</code> <code>{note}</code> <code>{gym}</code> &nbsp; <span class="muted">(weekly digest also supports</span> <code>{list}</code><span class="muted">)</span></div></div>` +
     templates
       .map(
         (t) => `
