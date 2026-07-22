@@ -63,18 +63,36 @@ const TEMPLATE = {
 };
 
 async function main() {
-  // Upsert coaches (idempotent by email).
+  // Coaches are a one-time bootstrap, not a recurring sync: once any coach
+  // exists, admins own that data (names/emails get edited via the admin panel,
+  // including replacing placeholder emails with real ones). Re-running this
+  // upsert by email on every deploy would recreate the original placeholder
+  // coach as a duplicate the moment its email was changed — so after the first
+  // run we only fill in any *new* template-referenced coaches that don't exist
+  // yet by name, and never touch existing rows.
+  const existingCount = await prisma.user.count();
   const idByKey = {};
-  for (const c of COACHES) {
-    const email = placeholderEmail(c.key);
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: { name: c.name, role: c.role },
-      create: { email, name: c.name, role: c.role },
-    });
-    idByKey[c.key] = user.id;
+
+  if (existingCount === 0) {
+    for (const c of COACHES) {
+      const email = placeholderEmail(c.key);
+      const user = await prisma.user.create({ data: { email, name: c.name, role: c.role } });
+      idByKey[c.key] = user.id;
+    }
+    console.log(`Seeded ${COACHES.length} coaches.`);
+  } else {
+    // Look up existing coaches by name so template slots below can still
+    // resolve coachIds; create only genuinely missing ones (by name).
+    for (const c of COACHES) {
+      let user = await prisma.user.findFirst({ where: { name: c.name } });
+      if (!user) {
+        user = await prisma.user.create({ data: { email: placeholderEmail(c.key), name: c.name, role: c.role } });
+        console.log(`Added missing coach: ${c.name}`);
+      }
+      idByKey[c.key] = user.id;
+    }
+    console.log(`Coaches already seeded (${existingCount} present) — left existing rows untouched.`);
   }
-  console.log(`Seeded ${COACHES.length} coaches.`);
 
   // Upsert template slots (idempotent by @@unique([dayOfWeek, time])).
   let slotCount = 0;
