@@ -46,8 +46,8 @@ export async function sendEmail({ to, subject, text, html, from, replyTo, attach
  * Send a magic sign-in link to a coach. When RESEND_API_KEY is unset (local dev),
  * the link is logged to the console instead so sign-in is still testable.
  */
-export async function sendMagicLink({ to, name, url }) {
-  const c = client();
+export async function sendMagicLink({ to, name, url, apiKey }) {
+  const c = client(apiKey);
 
   if (!c) {
     console.log('\n──────── MAGIC LINK (dev, no RESEND_API_KEY) ────────');
