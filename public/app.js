@@ -98,10 +98,14 @@ function slotHTML(c) {
       ? `<button class="act cancel" data-act="cancel" data-id="${c.id}">Cancel request</button>`
       : `<button class="act cover" data-act="claim" data-id="${c.id}">I’ll cover it</button>`;
   } else if (status === 'CLAIMED') {
+    const iAmCovering = c.coveredBy && c.coveredBy.id === me.id;
     inner += coachChip(c.assigned.name, 'strike');
     inner += `<div class="stamp covered">covered ✓</div>`;
     const by = c.coveredBy ? c.coveredBy.name : '—';
     inner += `<div class="covered-by"><span class="avatar">${initials(by)}</span>${by} is covering</div>`;
+    if (iAmCovering) {
+      inner += `<button class="act cancel" data-act="unclaim" data-id="${c.id}">Can’t make it anymore</button>`;
+    }
   }
   return `<div class="${cls}">${inner}</div>`;
 }
@@ -217,6 +221,11 @@ const ACTIONS = {
     endpoint: (id) => `/api/classes/${id}/claim`,
     optimistic: (c) => { c.status = 'CLAIMED'; c.coveredBy = { id: me.id, name: me.name }; },
     msg: (c, d) => `You’re covering <b>${DOW[d]} ${fmtTime(c.time)}</b> — calendar invite sent, reminder set for 24h before`,
+  },
+  unclaim: {
+    endpoint: (id) => `/api/classes/${id}/unclaim`,
+    optimistic: (c) => { c.status = 'OPEN'; c.coveredBy = null; },
+    msg: (c, d) => `You released <b>${DOW[d]} ${fmtTime(c.time)}</b> — it’s open for someone else to cover`,
   },
 };
 

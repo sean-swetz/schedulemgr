@@ -144,3 +144,35 @@ classesRouter.post('/api/classes/:id/claim', async (req, res) => {
     })()
   );
 });
+
+// POST /api/classes/:id/unclaim — coverer (or an admin) backs out, CLAIMED → OPEN.
+// Puts it back up for grabs rather than reverting to SCHEDULED, since the
+// original coach still needs coverage.
+classesRouter.post('/api/classes/:id/unclaim', async (req, res) => {
+  const { id } = req.params;
+
+  const ci = await prisma.classInstance.findUnique({ where: { id } });
+  if (!ci) return res.status(404).json({ error: 'Class not found' });
+  if (ci.coveredById !== req.user.id && req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Only the covering coach (or an admin) can release this class' });
+  }
+
+  const result = await prisma.classInstance.updateMany({
+    where: { id, status: 'CLAIMED' },
+    data: { status: 'OPEN', coveredById: null },
+  });
+  if (result.count !== 1) {
+    return res.status(409).json({ error: 'That class is no longer claimed' });
+  }
+
+  const instance = await loadWithRelations(id);
+  res.json({ class: serializeInstance(instance) });
+
+  // Let the original coach (and other coaches) know it's open again.
+  fireAndForget(
+    (async () => {
+      const recipients = await otherActiveCoachIds(req.user.id);
+      await notify(recipients, { type: 'CLASS_OPENED', instance });
+    })()
+  );
+});
