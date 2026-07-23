@@ -277,6 +277,7 @@
     padding-top:env(safe-area-inset-top);
   }
   .sheet.show{transform:translateX(0)}
+  .sheet[hidden],.sheet-backdrop[hidden]{display:none}
   .sheet-head{
     display:flex;align-items:center;justify-content:space-between;
     padding:16px 18px;border-bottom:2px solid var(--lime);
@@ -326,6 +327,8 @@
     box-shadow:0 10px 34px rgba(0,0,0,.6);padding:12px 14px;display:flex;align-items:center;gap:14px;
     max-width:92vw;
   }
+  .select-bar[hidden]{display:none}
+  .timeoff-btn[hidden]{display:none}
   .select-bar span{font-weight:700;font-size:14px}
   .select-bar button{
     background:var(--lime);color:#000;font-family:'Montserrat';font-weight:800;font-size:12px;
