@@ -1,10 +1,11 @@
 // CFP Coverage Board — service worker.
 // Provides an installable PWA shell and receives web-push notifications.
 
-const CACHE = 'cfp-shell-v1';
+const CACHE = 'cfp-shell-v2';
 const SHELL = ['/', '/app.js', '/manifest.webmanifest', '/logo.png', '/icon-192.png'];
 
 self.addEventListener('install', (event) => {
+  // Activate this new worker immediately instead of waiting for old tabs to close.
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
@@ -16,7 +17,9 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Network-first for API/auth; cache-first for the static shell (so it opens offline).
+// Network-FIRST for the app shell so users always get the latest HTML/JS when
+// online; fall back to cache only when offline. This is what lets deploys reach
+// installed home-screen apps automatically — no delete-and-re-add needed.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -25,19 +28,18 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) return; // let network handle
 
   event.respondWith(
-    caches.match(request).then((cached) =>
-      cached ||
-      fetch(request)
-        .then((res) => {
-          // Cache same-origin static assets opportunistically.
-          if (res.ok && (url.pathname.endsWith('.js') || url.pathname.endsWith('.png') || url.pathname === '/')) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy));
-          }
-          return res;
-        })
-        .catch(() => cached)
-    )
+    fetch(request)
+      .then((res) => {
+        // Refresh the cached copy of shell assets on every successful fetch.
+        if (res.ok && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css') ||
+                       url.pathname.endsWith('.png') || url.pathname.endsWith('.webmanifest') ||
+                       url.pathname === '/' || url.pathname.endsWith('.html'))) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(request)) // offline → serve last-known-good
   );
 });
 
