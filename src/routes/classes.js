@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { toIsoDate } from '../lib/dates.js';
 import { notify, getSettings } from '../lib/notify.js';
 import { buildCoverageIcs } from '../lib/ics.js';
+import { classLabel } from '../lib/format.js';
 
 export const classesRouter = Router();
 
@@ -77,6 +78,44 @@ classesRouter.post('/api/classes/:id/open', async (req, res) => {
     (async () => {
       const recipients = await otherActiveCoachIds(req.user.id);
       await notify(recipients, { type: 'CLASS_OPENED', instance });
+    })()
+  );
+});
+
+// POST /api/classes/bulk-open  { ids:[], note? } — open several of your own
+// SCHEDULED classes at once (e.g. a week off), with ONE combined notification.
+classesRouter.post('/api/classes/bulk-open', async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+  const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 200) : null;
+  if (ids.length === 0) return res.status(400).json({ error: 'No classes selected' });
+
+  // Only the requester's own, still-SCHEDULED classes flip. Others are ignored.
+  const result = await prisma.classInstance.updateMany({
+    where: { id: { in: ids }, assignedId: req.user.id, status: 'SCHEDULED' },
+    data: { status: 'OPEN', note: note || null },
+  });
+  if (result.count === 0) {
+    return res.status(409).json({ error: 'None of those classes could be opened' });
+  }
+
+  const opened = await prisma.classInstance.findMany({
+    where: { id: { in: ids }, assignedId: req.user.id, status: 'OPEN' },
+    include: { assigned: true, coveredBy: true },
+    orderBy: [{ date: 'asc' }, { time: 'asc' }],
+  });
+
+  res.json({ opened: opened.map(serializeInstance), count: opened.length });
+
+  // One combined notification to all other coaches.
+  fireAndForget(
+    (async () => {
+      const recipients = await otherActiveCoachIds(req.user.id);
+      const list = opened.map((ci) => `• ${classLabel(ci)}`).join('\n');
+      await notify(recipients, {
+        type: 'COVERAGE_REQUESTED_BULK',
+        instance: opened[0], // provides {coach}, {note}, etc.
+        extra: { vars: { list, count: String(opened.length) } },
+      });
     })()
   );
 });

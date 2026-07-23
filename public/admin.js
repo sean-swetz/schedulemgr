@@ -285,6 +285,29 @@ async function loadSchedule() {
   });
 }
 
+// ── Coverage stats panel ─────────────────────────────────────────────────────
+async function loadStats() {
+  const el = document.getElementById('panel-stats');
+  el.innerHTML = '<div class="card"><span class="muted">Loading…</span></div>';
+  const { stats } = await api('/api/admin/stats');
+  // Sort by all-time covered, descending (who steps up most).
+  const rows = [...stats].sort((a, b) => b.covered - a.covered);
+  el.innerHTML = `<div class="card">
+    <h3>Coverage stats</h3>
+    <div class="hint">“Covered” = times this coach stepped in for someone. “Needed” = times someone covered for them. Last 30 days and all-time.</div>
+    <table>
+      <thead><tr><th>Coach</th><th>Covered (30d)</th><th>Covered (all)</th><th>Needed (30d)</th><th>Needed (all)</th></tr></thead>
+      <tbody>
+      ${rows.map((s) => `<tr>
+        <td>${esc(s.name)}</td>
+        <td>${s.covered30}</td><td><b>${s.covered}</b></td>
+        <td>${s.needed30}</td><td>${s.needed}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
 // ── Compose / broadcast panel ────────────────────────────────────────────────
 async function loadCompose() {
   const el = document.getElementById('panel-compose');
@@ -542,7 +565,7 @@ async function loadLog() {
   document.getElementById('refreshLog')?.addEventListener('click', loadLog);
 }
 
-const LOADERS = { coaches: loadCoaches, schedule: loadSchedule, compose: loadCompose, templates: loadTemplates, notify: loadNotify, sender: loadSender, log: loadLog };
+const LOADERS = { coaches: loadCoaches, schedule: loadSchedule, stats: loadStats, compose: loadCompose, templates: loadTemplates, notify: loadNotify, sender: loadSender, log: loadLog };
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 let ME = null;

@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "NotificationEvent" ADD VALUE 'COVERAGE_REQUESTED_BULK';

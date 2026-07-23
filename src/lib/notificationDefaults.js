@@ -34,4 +34,9 @@ export const DEFAULT_TEMPLATES = {
     body: '{class} is starting soon and still needs a coach (originally {coach}). Can anyone cover?',
     enabled: true,
   },
+  COVERAGE_REQUESTED_BULK: {
+    subject: '{coach} needs coverage for {count} classes',
+    body: '{coach} needs coverage for these classes{note}:\n{list}\n\nOpen the board to claim any of them.',
+    enabled: true,
+  },
 };

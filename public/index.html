@@ -310,6 +310,28 @@
   .open-item .goto:hover{border-color:var(--lime);color:var(--lime)}
   .sheet-empty{text-align:center;color:var(--lime);font-family:'Permanent Marker';font-size:18px;padding:40px 10px}
 
+  /* ── Time-off multi-select ── */
+  .timeoff-row{max-width:1360px;margin:0 auto;width:100%;padding:14px 18px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .timeoff-btn{
+    font-family:'Montserrat';font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    background:var(--panel-2);color:var(--text);border:1px solid var(--line);padding:10px 15px;border-radius:8px;min-height:42px;
+  }
+  .timeoff-btn:hover{border-color:var(--lime)}
+  .timeoff-btn.active{background:var(--red);color:#fff;border-color:var(--red)}
+  .timeoff-hint{color:var(--muted);font-size:13px}
+  .slot.picked{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime)}
+  .select-bar{
+    position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    z-index:30;background:var(--panel);border:1px solid var(--lime);border-radius:12px;
+    box-shadow:0 10px 34px rgba(0,0,0,.6);padding:12px 14px;display:flex;align-items:center;gap:14px;
+    max-width:92vw;
+  }
+  .select-bar span{font-weight:700;font-size:14px}
+  .select-bar button{
+    background:var(--lime);color:#000;font-family:'Montserrat';font-weight:800;font-size:12px;
+    letter-spacing:.06em;text-transform:uppercase;padding:11px 16px;border-radius:8px;min-height:44px;
+  }
+
   /* ── Toast ── */
   .toast{
     position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));
@@ -390,11 +412,22 @@
   <nav class="daytabs" id="daytabs" aria-label="Pick a day"></nav>
 </header>
 
+<div class="timeoff-row">
+  <button id="timeOffBtn" class="timeoff-btn" hidden>Request time off</button>
+  <span class="timeoff-hint" id="timeOffHint" hidden>Tap your classes to select them, then confirm.</span>
+</div>
+
 <section class="alerts" aria-live="polite"><div id="alertsInner"></div></section>
 
 <main class="board-wrap"><div class="board" id="board"><div class="board-msg">Loading…</div></div></main>
 
 <div class="toast" id="toast" role="status"></div>
+
+<!-- Selection confirm bar (bulk time-off) -->
+<div class="select-bar" id="selectBar" hidden>
+  <span id="selectCount">0 selected</span>
+  <button id="selectConfirm">Request coverage</button>
+</div>
 
 <!-- Open-classes panel (all classes needing coverage, across weeks) -->
 <div class="sheet-backdrop" id="openBackdrop" hidden></div>

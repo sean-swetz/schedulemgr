@@ -507,6 +507,43 @@ adminRouter.patch('/api/admin/classes/:id', async (req, res) => {
   });
 });
 
+// ── Coverage stats ───────────────────────────────────────────────────────────
+// GET /api/admin/stats → per-coach coverage tallies (last 30 days + all-time).
+adminRouter.get('/api/admin/stats', async (_req, res) => {
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+
+  const coaches = await prisma.user.findMany({
+    where: { active: true },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+
+  // A CLAIMED class means coveredBy stepped in for assigned.
+  const claimed = await prisma.classInstance.findMany({
+    where: { status: 'CLAIMED', coveredById: { not: null } },
+    select: { assignedId: true, coveredById: true, date: true },
+  });
+
+  const stat = {}; // id -> { covered30, covered, needed30, needed }
+  for (const c of coaches) stat[c.id] = { covered30: 0, covered: 0, needed30: 0, needed: 0 };
+
+  for (const ci of claimed) {
+    const recent = ci.date >= cutoff;
+    if (stat[ci.coveredById]) {
+      stat[ci.coveredById].covered++;
+      if (recent) stat[ci.coveredById].covered30++;
+    }
+    if (stat[ci.assignedId]) {
+      stat[ci.assignedId].needed++;
+      if (recent) stat[ci.assignedId].needed30++;
+    }
+  }
+
+  const stats = coaches.map((c) => ({ id: c.id, name: c.name, ...stat[c.id] }));
+  res.json({ stats });
+});
+
 // ── Notification log ─────────────────────────────────────────────────────────
 adminRouter.get('/api/admin/notifications/log', async (req, res) => {
   const take = Math.min(Number(req.query.limit) || 100, 500);

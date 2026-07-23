@@ -42,6 +42,8 @@ let me = null;
 let weekStart = mondayOf(new Date()); // Date at local midnight, Monday
 let week = null; // API response { weekStart, days:[{date, classes, openCount}] }
 let selectedDay = 0;
+let selectMode = false;          // "request time off" multi-select mode
+const selected = new Set();      // class ids selected in that mode
 const todayIso = toIso(new Date());
 
 // ---- API ----
@@ -95,7 +97,11 @@ function slotHTML(c) {
 
   if (status === 'SCHEDULED') {
     inner += coachChip(c.assigned.name);
-    if (mine) {
+    if (mine && selectMode) {
+      const checked = selected.has(c.id);
+      cls += checked ? ' picked' : '';
+      inner += `<button class="act ${checked ? 'cover' : 'request'}" data-pick="${c.id}">${checked ? '✓ Selected' : 'Select'}</button>`;
+    } else if (mine) {
       inner += `<button class="act request" data-act="open" data-id="${c.id}">Request coverage</button>`;
     }
   } else if (status === 'OPEN') {
@@ -185,6 +191,26 @@ function render() {
       </div>`;
     })
     .join('');
+
+  renderSelectUI();
+}
+
+// "Request time off" toggle + selection confirm bar.
+function renderSelectUI() {
+  const iHaveClasses = week.days.some((d) => d.classes.some((c) => c.assigned.id === me.id && c.status === 'SCHEDULED'));
+  const toggle = document.getElementById('timeOffBtn');
+  toggle.hidden = !iHaveClasses && !selectMode;
+  toggle.textContent = selectMode ? 'Cancel' : 'Request time off';
+  toggle.classList.toggle('active', selectMode);
+
+  const bar = document.getElementById('selectBar');
+  if (selectMode && selected.size > 0) {
+    bar.hidden = false;
+    document.getElementById('selectCount').textContent =
+      `${selected.size} class${selected.size > 1 ? 'es' : ''} selected`;
+  } else {
+    bar.hidden = true;
+  }
 }
 
 // ---- Toast ----
@@ -277,6 +303,15 @@ document.body.addEventListener('click', async (e) => {
   const tab = e.target.closest('.daytab');
   if (tab) { selectedDay = +tab.dataset.day; render(); return; }
 
+  // Time-off select mode: toggle a class into/out of the selection.
+  const pick = e.target.closest('[data-pick]');
+  if (pick) {
+    const id = pick.dataset.pick;
+    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    render();
+    return;
+  }
+
   // Admin reassign pencil → inline coach picker inside the slot.
   const edit = e.target.closest('[data-edit]');
   if (edit) {
@@ -314,6 +349,30 @@ document.body.addEventListener('click', async (e) => {
     render();
     document.getElementById('board').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+});
+
+// Time-off mode toggle + hint.
+document.getElementById('timeOffBtn').addEventListener('click', () => {
+  selectMode = !selectMode;
+  selected.clear();
+  document.getElementById('timeOffHint').hidden = !selectMode;
+  render();
+});
+
+// Confirm the selection → one bulk-open request.
+document.getElementById('selectConfirm').addEventListener('click', async () => {
+  if (selected.size === 0) return;
+  const note = prompt('Add a note (optional), e.g. "vacation":', '') ?? '';
+  const ids = [...selected];
+  try {
+    const { count } = await api('/api/classes/bulk-open', {
+      method: 'POST', body: JSON.stringify({ ids, note: note.trim() || undefined }),
+    });
+    toast(`Requested coverage for <b>${count} class${count > 1 ? 'es' : ''}</b> — coaches notified`);
+    selectMode = false; selected.clear();
+    document.getElementById('timeOffHint').hidden = true;
+    await loadWeek();
+  } catch (err) { toast(err.message, true); }
 });
 
 document.getElementById('prevWeek').addEventListener('click', async () => {

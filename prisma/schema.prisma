@@ -81,6 +81,7 @@ enum NotificationEvent {
   BROADCAST // admin compose-and-send announcement
   WEEKLY_DIGEST // scheduled summary of open classes for the coming week
   UNCOVERED_ESCALATION // class still open close to its start time
+  COVERAGE_REQUESTED_BULK // one coach opened several classes at once (time off)
 }
 
 enum NotificationChannel {
