@@ -69,6 +69,7 @@ async function loadWeek() {
   const todayIdx = week.days.findIndex((d) => d.date === todayIso);
   selectedDay = todayIdx >= 0 ? todayIdx : 0;
   render();
+  refreshOpenClasses(); // keep the bell badge in sync (fire-and-forget)
 }
 
 // ---- Rendering ----
@@ -85,6 +86,12 @@ function slotHTML(c) {
     (status === 'OPEN' ? ' open' : '') +
     (status === 'CLAIMED' ? ' claimed' : '');
   let inner = `<div class="time">${fmtTime(c.time)}</div><div class="cname">${c.className}</div>`;
+
+  // Admin-only: tiny reassign (pencil) button, top-right of the card.
+  const adminEdit = me.role === 'ADMIN'
+    ? `<button class="slot-edit" data-edit="${c.id}" data-coach="${c.assigned.id}" aria-label="Reassign this class" title="Reassign coach">✎</button>`
+    : '';
+  inner = adminEdit + inner;
 
   if (status === 'SCHEDULED') {
     inner += coachChip(c.assigned.name);
@@ -257,9 +264,46 @@ async function doAction(act, id) {
 }
 
 // ---- Events ----
-document.body.addEventListener('click', (e) => {
+// Admin: coach list for the reassign dropdown (fetched once, lazily).
+let coachList = null;
+async function ensureCoachList() {
+  if (coachList) return coachList;
+  const data = await api('/api/admin/coaches');
+  coachList = data.coaches.filter((c) => c.active);
+  return coachList;
+}
+
+document.body.addEventListener('click', async (e) => {
   const tab = e.target.closest('.daytab');
   if (tab) { selectedDay = +tab.dataset.day; render(); return; }
+
+  // Admin reassign pencil → inline coach picker inside the slot.
+  const edit = e.target.closest('[data-edit]');
+  if (edit) {
+    const slot = edit.closest('.slot');
+    if (slot.querySelector('.slot-reassign')) return; // already open
+    const coaches = await ensureCoachList();
+    const cur = edit.dataset.coach;
+    const div = document.createElement('div');
+    div.className = 'slot-reassign';
+    div.innerHTML =
+      `<select>${coaches.map((c) => `<option value="${c.id}" ${c.id === cur ? 'selected' : ''}>${c.name}</option>`).join('')}</select>` +
+      `<button data-reassign="${edit.dataset.edit}">Save</button>`;
+    slot.appendChild(div);
+    return;
+  }
+  const reassign = e.target.closest('[data-reassign]');
+  if (reassign) {
+    const sel = reassign.closest('.slot-reassign').querySelector('select');
+    try {
+      await api(`/api/admin/classes/${reassign.dataset.reassign}`, {
+        method: 'PATCH', body: JSON.stringify({ coachId: sel.value }),
+      });
+      toast('Class reassigned');
+      await loadWeek();
+    } catch (err) { toast(err.message, true); }
+    return;
+  }
 
   const btn = e.target.closest('[data-act]');
   if (btn) { doAction(btn.dataset.act, btn.dataset.id); return; }
@@ -356,6 +400,89 @@ calEl.addEventListener('click', async (e) => {
   if (day) {
     weekStart = mondayOf(parseIso(day.dataset.iso));
     closeCal(); await loadWeek();
+  }
+});
+
+// ---- Open-classes panel (bell) ----
+const bellBtn = document.getElementById('bellBtn');
+const bellBadge = document.getElementById('bellBadge');
+const openSheet = document.getElementById('openSheet');
+const openBackdrop = document.getElementById('openBackdrop');
+const openList = document.getElementById('openList');
+let openClasses = [];
+
+async function refreshOpenClasses() {
+  try {
+    const data = await api('/api/open-classes');
+    openClasses = data.classes;
+  } catch { openClasses = []; }
+  const n = openClasses.length;
+  bellBadge.textContent = n;
+  bellBadge.hidden = n === 0;
+  if (!openSheet.hidden) renderOpenList();
+}
+
+function renderOpenList() {
+  if (openClasses.length === 0) {
+    openList.innerHTML = `<div class="sheet-empty">All covered — nice work! ✓</div>`;
+    return;
+  }
+  openList.innerHTML = openClasses.map((c) => {
+    const d = parseIso(c.date);
+    const mine = c.assigned.id === me.id;
+    return `<div class="open-item" data-id="${c.id}" data-date="${c.date}">
+      <div class="when">${DOW[(d.getDay()+6)%7]} ${MONTHS[d.getMonth()]} ${d.getDate()} · ${fmtTime(c.time)}</div>
+      <div class="who">${c.className} · usually ${c.assigned.name}</div>
+      ${c.note ? `<div class="onote">“${c.note}”</div>` : ''}
+      <div class="row2">
+        ${mine
+          ? `<button class="cover" disabled>Your class</button>`
+          : `<button class="cover" data-cover="${c.id}">I’ll cover it</button>`}
+        <button class="goto" data-goto="${c.date}">View</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openBell() {
+  renderOpenList();
+  openBackdrop.hidden = false; openSheet.hidden = false;
+  requestAnimationFrame(() => { openBackdrop.classList.add('show'); openSheet.classList.add('show'); });
+}
+function closeBell() {
+  openBackdrop.classList.remove('show'); openSheet.classList.remove('show');
+  setTimeout(() => { openBackdrop.hidden = true; openSheet.hidden = true; }, 220);
+}
+
+bellBtn.addEventListener('click', openBell);
+document.getElementById('openClose').addEventListener('click', closeBell);
+openBackdrop.addEventListener('click', closeBell);
+
+openList.addEventListener('click', async (e) => {
+  const goto = e.target.closest('[data-goto]');
+  if (goto) {
+    weekStart = mondayOf(parseIso(goto.dataset.goto));
+    closeBell();
+    await loadWeek();
+    // select the right day on mobile
+    const idx = week.days.findIndex((d) => d.date === goto.dataset.goto);
+    if (idx >= 0) { selectedDay = idx; render(); }
+    document.getElementById('board').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  const cover = e.target.closest('[data-cover]');
+  if (cover) {
+    cover.disabled = true;
+    try {
+      await api(`/api/classes/${cover.dataset.cover}/claim`, { method: 'POST', body: JSON.stringify({}) });
+      toast(`You’re covering it — calendar invite sent, reminder set for 24h before`);
+      await refreshOpenClasses();
+      // if the covered class is in the current week, refresh the board too
+      await loadWeek();
+    } catch (err) {
+      toast(err.message, true);
+      await refreshOpenClasses();
+    }
   }
 });
 

@@ -1,9 +1,22 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { parseIsoDate, toIsoDate, weekDates } from '../lib/dates.js';
+import { parseIsoDate, toIsoDate, weekDates, weekStart } from '../lib/dates.js';
 import { materializeWeek } from '../lib/materialize.js';
 
 export const weekRouter = Router();
+
+// GET /api/open-classes — every class still needing coverage (OPEN), from the
+// current week forward, soonest first. Lets coaches see all open classes in one
+// place instead of paging through weeks.
+weekRouter.get('/api/open-classes', async (_req, res) => {
+  const from = weekStart(new Date()); // start of the current week (don't show past)
+  const instances = await prisma.classInstance.findMany({
+    where: { status: 'OPEN', date: { gte: from } },
+    include: { assigned: true, coveredBy: true },
+    orderBy: [{ date: 'asc' }, { time: 'asc' }],
+  });
+  res.json({ classes: instances.map(serializeInstance) });
+});
 
 // Shape a ClassInstance (with assigned/coveredBy included) for the API.
 function serializeInstance(ci) {
