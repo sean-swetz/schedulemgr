@@ -28,3 +28,25 @@ pushRouter.get('/api/push/status', async (req, res) => {
   const u = await prisma.user.findUnique({ where: { id: req.user.id }, select: { pushSubscription: true } });
   res.json({ subscribed: Boolean(u?.pushSubscription) });
 });
+
+// GET /api/me/notifications → the current coach's own email + push state.
+pushRouter.get('/api/me/notifications', async (req, res) => {
+  const u = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { emailEnabled: true, pushSubscription: true },
+  });
+  res.json({ emailEnabled: u.emailEnabled, pushEnabled: Boolean(u.pushSubscription) });
+});
+
+// PATCH /api/me/notifications { emailEnabled } → coach sets their own email pref.
+pushRouter.patch('/api/me/notifications', async (req, res) => {
+  if (typeof req.body?.emailEnabled !== 'boolean') {
+    return res.status(400).json({ error: 'emailEnabled must be true or false' });
+  }
+  const u = await prisma.user.update({
+    where: { id: req.user.id },
+    data: { emailEnabled: req.body.emailEnabled },
+    select: { emailEnabled: true, pushSubscription: true },
+  });
+  res.json({ emailEnabled: u.emailEnabled, pushEnabled: Boolean(u.pushSubscription) });
+});

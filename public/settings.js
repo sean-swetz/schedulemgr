@@ -38,7 +38,9 @@ async function refresh() {
   toggleUI(subscribed);
 }
 
+let pushIsOn = false;
 function toggleUI(on) {
+  pushIsOn = on;
   pushBtn.style.display = on ? 'none' : '';
   pushOff.style.display = on ? '' : 'none';
   setState(on ? 'Push notifications are on for this device.' : 'Push notifications are off.', on ? 'on' : '');
@@ -93,3 +95,40 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 refresh().catch((err) => { if (err.message !== 'unauthorized') setState(err.message, 'err'); });
+
+// ── Email notifications (coach's own preference) ──
+const emailOn = document.getElementById('emailOn');
+const emailOff = document.getElementById('emailOff');
+const emailState = document.getElementById('emailState');
+function setEmailState(msg, cls = '') { emailState.className = 'state ' + cls; emailState.textContent = msg; }
+
+function renderEmail(on) {
+  emailOn.style.display = on ? 'none' : '';
+  emailOff.style.display = on ? '' : 'none';
+  setEmailState(on ? 'Email notifications are on.' : 'Email notifications are off.', on ? 'on' : '');
+}
+
+async function setEmail(enabled) {
+  try {
+    const r = await api('/api/me/notifications', {
+      method: 'PATCH', body: JSON.stringify({ emailEnabled: enabled }),
+    });
+    renderEmail(r.emailEnabled);
+  } catch (err) { setEmailState(err.message, 'err'); }
+}
+
+emailOn.addEventListener('click', () => setEmail(true));
+emailOff.addEventListener('click', () => {
+  // Warn if this would leave the coach with no way to hear about coverage.
+  if (!pushIsOn && !confirm(
+    "Push is off too, so you won't get any coverage alerts — you'd have to check the app yourself. Turn email off anyway?"
+  )) return;
+  setEmail(false);
+});
+
+(async () => {
+  try {
+    const r = await api('/api/me/notifications');
+    renderEmail(r.emailEnabled);
+  } catch (err) { if (err.message !== 'unauthorized') setEmailState(err.message, 'err'); }
+})();
